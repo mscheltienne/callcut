@@ -56,6 +56,7 @@ dependencies = [
   'click',
   'numpy>=1.23,<3',
   'packaging',
+  'pandas',
   'psutil',
 ]
 description = 'Automatic animal call detection.'

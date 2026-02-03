@@ -4,15 +4,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+import pandas as pd
 import torch
 import torchaudio
 from torch import Tensor
 
 from callcut.utils._checks import check_type, ensure_device, ensure_int, ensure_path
-from callcut.utils.logs import logger
+from callcut.utils.logs import logger, warn
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from numpy.typing import NDArray
 
 
 def load_audio(
@@ -105,3 +109,61 @@ def load_audio(
     logger.debug("Moved waveform to device: %s", device)
 
     return waveform, original_sr
+
+
+def load_annotations(fname: str | Path) -> NDArray[np.floating]:
+    """Load call annotations from a CSV file.
+
+    The CSV file must contain columns ``start_seconds`` and ``stop_seconds``.
+    Despite the column names, values in the CSV are expected to be in milliseconds
+    and are converted to seconds.
+
+    Parameters
+    ----------
+    fname : str | Path
+        Path to the CSV annotation file.
+
+    Returns
+    -------
+    intervals : NDArray of shape (n_intervals, 2)
+        Array of ``(start, stop)`` times in seconds. Each row represents one
+        annotated call interval. Intervals are sorted by start time.
+
+    Examples
+    --------
+    >>> intervals = load_annotations("recording_annotations.csv")
+    >>> intervals.shape
+    (42, 2)
+    >>> intervals[0]  # first interval in seconds
+    array([0.1234, 0.4562])
+    """
+    fname = ensure_path(fname, must_exist=True)
+    logger.debug("Loading annotations from: %s", fname)
+
+    df = pd.read_csv(fname)
+
+    # check required columns
+    required = {"start_seconds", "stop_seconds"}
+    if not required.issubset(df.columns):
+        raise ValueError(
+            f"CSV file must contain 'start_seconds' and 'stop_seconds' columns. "
+            f"Found columns: {list(df.columns)}"
+        )
+
+    # drop rows with missing values and invalid intervals
+    df = df.dropna(subset=["start_seconds", "stop_seconds"])
+    df = df[df["stop_seconds"] > df["start_seconds"]]
+
+    if len(df) == 0:
+        warn(f"No valid intervals found in {fname}", ignore_namespaces=("callcut",))
+        return np.empty((0, 2), dtype=np.float64)
+
+    # extract intervals and convert from ms to seconds
+    intervals = df[["start_seconds", "stop_seconds"]].values.astype(np.float64)
+    intervals = intervals / 1000.0
+
+    # sort by start time
+    intervals = intervals[np.argsort(intervals[:, 0])]
+
+    logger.debug("Loaded %d intervals from %s", len(intervals), fname)
+    return intervals
