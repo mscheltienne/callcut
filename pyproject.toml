@@ -38,8 +38,8 @@ test = [
 
 [project]
 authors = [
-  {email = 'theophane.piette@unige.ch', name = 'Theophane Piette'},
   {email = 'mathieu.scheltienne@gmail.com', name = 'Mathieu Scheltienne'},
+  {email = 'theophane.piette@unige.ch', name = 'Theophane Piette'},
 ]
 classifiers = [
   'Natural Language :: English',
@@ -61,9 +61,9 @@ dependencies = [
 description = 'Automatic animal call detection.'
 dynamic = ["version"]
 keywords = [
-  'python',
-  'call',
   'animal',
+  'call',
+  'python',
 ]
 license = "MIT"
 license-files = ["LICENSE"]
@@ -73,6 +73,14 @@ maintainers = [
 name = 'callcut'
 readme = 'README.md'
 requires-python = '>=3.11'
+
+[project.optional-dependencies]
+cpu = [
+  'torch',
+]
+cu128 = [
+  'torch',
+]
 
 [project.scripts]
 callcut = 'callcut._commands.main:run'
@@ -159,4 +167,21 @@ spaces_before_inline_comment = 2
 trailing_comma_inline_array = true
 
 [tool.uv]
+conflicts = [[{extra = 'cpu'}, {extra = 'cu128'}]]
 default-groups = "all"
+
+[[tool.uv.index]]
+explicit = true
+name = 'torch-cpu'
+url = 'https://download.pytorch.org/whl/cpu'
+
+[[tool.uv.index]]
+explicit = true
+name = 'torch-cu128'
+url = 'https://download.pytorch.org/whl/cu128'
+
+[tool.uv.sources]
+torch = [
+  {extra = 'cpu', index = 'torch-cpu'},
+  {extra = 'cu128', index = 'torch-cu128'},
+]
