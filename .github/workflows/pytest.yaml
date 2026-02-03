@@ -23,11 +23,8 @@ jobs:
         python-version: ["3.11", "3.14"]
     name: ${{ matrix.os }} - py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}-latest
-    defaults:
-      run:
-        shell: bash
     steps:
-      - run: sudo apt install ffmpeg
+      - run: sudo apt update && sudo apt install ffmpeg
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
