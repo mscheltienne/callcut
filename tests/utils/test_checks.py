@@ -9,6 +9,7 @@ import pytest
 from callcut.utils._checks import (
     check_type,
     check_value,
+    ensure_device,
     ensure_int,
     ensure_path,
     ensure_verbose,
@@ -118,3 +119,39 @@ def test_ensure_path() -> None:
 
     with pytest.raises(TypeError, match="path is invalid"):
         ensure_path(Foo(), must_exist=False)
+
+
+def test_ensure_device() -> None:
+    """Test ensure_device checker."""
+    # valids - string specifications
+    device = ensure_device("cpu")
+    assert device == torch.device("cpu")
+    device = ensure_device("cuda:0")
+    assert device == torch.device("cuda", 0)
+
+    # valids - torch.device passthrough
+    device = ensure_device(torch.device("cpu"))
+    assert device == torch.device("cpu")
+
+    # valids - None to get the current default
+    default_device = torch.get_default_device()
+    device = ensure_device(None)
+    assert device == default_device
+
+    # invalids - boolean (bool is subclass of int, but should be rejected)
+    with pytest.raises(TypeError, match="must be an instance of"):
+        ensure_device(True)
+    with pytest.raises(TypeError, match="must be an instance of"):
+        ensure_device(False)
+
+    # invalids - invalid string
+    with pytest.raises(ValueError, match="is not a valid device string"):
+        ensure_device("invalid_device")
+
+    # invalids - wrong type
+    with pytest.raises(TypeError, match="must be an instance of str, device, or None"):
+        ensure_device(0)
+    with pytest.raises(TypeError, match="must be an instance of str, device, or None"):
+        ensure_device([0])
+    with pytest.raises(TypeError, match="must be an instance of str, device, or None"):
+        ensure_device({"device": "cpu"})

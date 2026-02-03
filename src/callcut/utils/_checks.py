@@ -13,6 +13,8 @@ import numpy as np
 if TYPE_CHECKING:
     from typing import Any
 
+    import torch
+
 
 def ensure_int(item: Any, item_name: str | None = None) -> int:
     """Ensure a variable is an integer.
@@ -256,3 +258,66 @@ def ensure_path(item: Any, must_exist: bool) -> Path:
     if must_exist and not item.exists():
         raise FileNotFoundError(f"The provided path '{str(item)}' does not exist.")
     return item
+
+
+def ensure_device(
+    item: str | torch.device | None,
+    item_name: str = "device",
+) -> torch.device:
+    """Validate and convert a device-like value to :class:`torch.device`.
+
+    Parameters
+    ----------
+    item : str | torch.device | None
+        A device-like value: string (e.g., ``"cpu"``, ``"cuda:0"``, ``"mps"``),
+        :class:`~torch.device`, or ``None``. ``None`` will return the currently
+        configured default ``torch`` device.
+    item_name : str
+        Name of the ``item`` for error messages.
+
+    Returns
+    -------
+    device : torch.device
+        The validated and converted :class:`~torch.device`.
+
+    Raises
+    ------
+    TypeError
+        If ``item`` is not a valid device-like type.
+    ValueError
+        If ``item`` is a string that cannot be parsed as a device.
+
+    Notes
+    -----
+    Requires ``torch`` to be installed. Will raise :class:`ImportError` if not
+    available.
+
+    String device specifications support all PyTorch backends: ``"cpu"``, ``"cuda"``,
+    ``"mps"``, ``"xpu"``, ``"xla"``, ``"meta"``, ``"vulkan"``, ``"lazy"``, etc.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        from dandelion_utils.checks import ensure_device
+
+        ensure_device("cpu")
+        # device(type='cpu')
+        ensure_device("cuda:0")
+        # device(type='cuda', index=0)
+        ensure_device("mps")
+        # device(type='mps')
+    """
+    # Validate type (None and bool are explicitly rejected)
+    check_type(item, (str, torch.device, None), item_name=item_name)
+
+    if item is None:
+        return torch.get_default_device()
+    elif isinstance(item, torch.device):
+        return item
+    elif isinstance(item, str):
+        try:
+            return torch.device(item)
+        except RuntimeError as exc:
+            msg = f"'{item_name}' value '{item}' is not a valid device string."
+            raise ValueError(msg) from exc
