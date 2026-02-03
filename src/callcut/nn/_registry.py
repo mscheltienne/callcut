@@ -12,50 +12,44 @@ if TYPE_CHECKING:
 _MODEL_REGISTRY: dict[str, type[BaseDetector]] = {}
 
 
-def register_model(name: str):
+def register_model(cls: type[BaseDetector]) -> type[BaseDetector]:
     """Register a model class in the registry.
 
-    This decorator adds a model class to the global registry, making it available
-    via :func:`get_model` and :func:`~callcut.nn.list_models`.
+    This decorator adds a model class to the global registry using the class name,
+    making it available via :func:`get_model` and :func:`list_models`.
 
     Parameters
     ----------
-    name : str
-        Name to register the model under. This name is used by
-        :func:`~callcut.nn.get_model` to instantiate the model.
+    cls : type
+        The model class to register.
 
     Returns
     -------
-    decorator : callable
-        The decorator function.
+    cls : type
+        The same class, unmodified.
 
     Examples
     --------
     Register a custom model:
 
     >>> from callcut.nn import BaseDetector, register_model
-    >>> @register_model("my_custom_model")
+    >>> @register_model
     ... class MyCustomModel(BaseDetector):
     ...     # implementation
     ...     pass
+
+    The model is then available via:
+
+    >>> model = get_model("MyCustomModel", n_bands=8)
     """
-    check_type(name, (str,), "name")
-    if len(name) == 0:
-        raise ValueError("Model name cannot be empty.")
-
-    def decorator(cls):
-        if name in _MODEL_REGISTRY:
-            raise ValueError(
-                f"Model '{name}' is already registered. Use a different name or "
-                "unregister the existing model first."
-            )
-        _MODEL_REGISTRY[name] = cls
-
-        # store the registered name on the class for reference
-        cls._registered_name = name
-        return cls
-
-    return decorator
+    name = cls.__name__
+    if name in _MODEL_REGISTRY:
+        raise ValueError(
+            f"Model '{name}' is already registered. Use a different class name or "
+            "unregister the existing model first."
+        )
+    _MODEL_REGISTRY[name] = cls
+    return cls
 
 
 def get_model(name: str, **kwargs) -> BaseDetector:
@@ -64,7 +58,7 @@ def get_model(name: str, **kwargs) -> BaseDetector:
     Parameters
     ----------
     name : str
-        Name of the registered model.
+        Name of the registered model (the class name).
     **kwargs
         Keyword arguments passed to the model constructor.
 
@@ -78,15 +72,15 @@ def get_model(name: str, **kwargs) -> BaseDetector:
     ValueError
         If the model name is not found in the registry.
 
-    Examples
-    --------
-    >>> model = get_model("tiny_cnn", n_bands=8)
-    >>> model = get_model("tiny_cnn", n_bands=8, base=64)
-
     See Also
     --------
     list_models : List all available model names.
     register_model : Register a new model.
+
+    Examples
+    --------
+    >>> model = get_model("TinySegCNN", n_bands=8)
+    >>> model = get_model("TinySegCNN", n_bands=8, base=64)
     """
     check_type(name, (str,), "name")
     check_value(name, _MODEL_REGISTRY, "name")
@@ -101,14 +95,14 @@ def list_models() -> list[str]:
     models : list of str
         Names of all registered models, sorted alphabetically.
 
-    Examples
-    --------
-    >>> list_models()
-    ['tiny_cnn']
-
     See Also
     --------
     get_model : Get a model instance by name.
+
+    Examples
+    --------
+    >>> list_models()
+    ['TinySegCNN']
     """
     return sorted(_MODEL_REGISTRY.keys())
 
@@ -121,14 +115,14 @@ def unregister_model(name: str) -> None:
     name : str
         Name of the model to unregister.
 
-    Examples
-    --------
-    >>> unregister_model("my_custom_model")
-
     Raises
     ------
     ValueError
         If the model name is not found in the registry.
+
+    Examples
+    --------
+    >>> unregister_model("MyCustomModel")
     """
     check_type(name, (str,), "name")
     check_value(name, _MODEL_REGISTRY, "name")

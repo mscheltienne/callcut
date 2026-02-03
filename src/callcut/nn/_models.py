@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from torch import Tensor
 
 
-@register_model("tiny_cnn")
+@register_model
 class TinySegCNN(BaseDetector):
     """Lightweight 1D CNN for call detection.
 
