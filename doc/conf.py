@@ -105,7 +105,7 @@ autoclass_content = "class"
 
 # -- intersphinx -----------------------------------------------------------------------
 intersphinx_mapping = get_intersphinx_mapping(
-    packages={"matplotlib", "mne", "numpy", "pandas", "python", "scipy", "sklearn"}
+    packages={"numpy", "pandas", "python", "torch"}
 )
 intersphinx_timeout = 5
 
@@ -118,6 +118,10 @@ autosectionlabel_prefix_document = True
 # -- numpydoc --------------------------------------------------------------------------
 numpydoc_class_members_toctree = False
 numpydoc_attributes_as_param_list = False
+numpydoc_show_inherited_class_members = {
+    "callcut.nn.BaseDetector": False,
+    "callcut.nn.TinySegCNN": False,
+}
 
 # x-ref
 numpydoc_xref_param_type = True

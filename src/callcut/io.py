@@ -125,7 +125,7 @@ def load_annotations(fname: str | Path) -> NDArray[np.floating]:
 
     Returns
     -------
-    intervals : NDArray of shape (n_intervals, 2)
+    intervals : array of shape ``(n_intervals, 2)``
         Array of ``(start, stop)`` times in seconds. Each row represents one
         annotated call interval. Intervals are sorted by start time.
 

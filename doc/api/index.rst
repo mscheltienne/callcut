@@ -7,4 +7,6 @@ This is the reference for classes (``CamelCase`` names) and functions
 .. toctree::
     :maxdepth: 2
 
+    io.rst
+    nn.rst
     logging.rst
