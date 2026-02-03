@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import click
 
-from template._commands.sys_info import run as sys_info
+from callcut._commands.sys_info import run as sys_info
 
 
 @click.group()

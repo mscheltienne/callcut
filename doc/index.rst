@@ -1,13 +1,13 @@
 .. include:: ./links.inc
 
-**template-python**
-===================
+**CallCut**
+===========
 
 .. toctree::
    :hidden:
 
    api/index
-   generated/tutorials/index
    changes/index
 
-This is a template python-repository.
+This is an automatic animal call cutter which will help you process your audio
+recordings.

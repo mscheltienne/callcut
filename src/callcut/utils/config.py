@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import psutil
 from packaging.requirements import Requirement
 
-from template.utils._checks import check_type
+from callcut.utils._checks import check_type
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -186,7 +186,7 @@ def _find_distribution_name(module_package: str) -> str:
     """Find the distribution name from a module's ``__package__``.
 
     Tries progressively shorter prefixes until finding one with valid metadata.
-    Handles both regular packages (e.g., ``template.utils`` -> ``template``) and
+    Handles both regular packages (e.g., ``callcut.utils`` -> ``callcut``) and
     namespace packages (e.g., ``sphinxcontrib.pydantic.utils`` ->
     ``sphinxcontrib.pydantic``).
     """

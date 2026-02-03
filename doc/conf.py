@@ -6,28 +6,25 @@
 from __future__ import annotations
 
 import inspect
-import subprocess
-import sys
 from datetime import date
 from importlib import import_module
 
 from intersphinx_registry import get_intersphinx_mapping
 from sphinx.util import logging as sphinx_logging
-from sphinx_gallery.sorting import FileNameSortKey
 
-import template
+import callcut
 
 _logger = sphinx_logging.getLogger(__name__)
 
 # -- project information ---------------------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "template-python"
-author = "Mathieu Scheltienne"
+project = "callcut"
+author = "Theophane Piette, Mathieu Scheltienne"
 copyright = f"{date.today().year}, {author}"  # noqa: A001
-release = template.__version__
-package = template.__name__
-gh_url = "https://github.com/mscheltienne/template-python"
+release = callcut.__version__
+package = callcut.__name__
+gh_url = "https://github.com/mscheltienne/callcut"
 
 # -- general configuration -------------------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -53,7 +50,6 @@ extensions = [
     "sphinxcontrib.pydantic",
     "sphinx_copybutton",
     "sphinx_design",
-    "sphinx_gallery.gen_gallery",
     "sphinx_issues",
 ]
 
@@ -76,9 +72,7 @@ default_role = "py:obj"
 suppress_warnings = ["config.cache"]
 
 # -- options for HTML output -----------------------------------------------------------
-html_css_files = [
-    "css/style.css",
-]
+html_css_files = []
 html_permalinks_icon = "🔗"
 html_show_sphinx = False
 html_static_path = ["_static"]
@@ -228,32 +222,6 @@ def linkcode_resolve(domain: str, info: dict[str, str]) -> str | None:
     url = f"{gh_url}/blob/{branch}/src/{package}/{fname}#{lines}"
     return url
 
-
-# -- sphinx-gallery --------------------------------------------------------------------
-if sys.platform.startswith("win"):
-    try:
-        subprocess.check_call(["optipng", "--version"])
-        compress_images = ("images", "thumbnails")
-    except Exception:
-        compress_images = ()
-else:
-    compress_images = ("images", "thumbnails")
-
-sphinx_gallery_conf = {
-    "backreferences_dir": "generated/backreferences",
-    "compress_images": compress_images,
-    "doc_module": (f"{package}",),
-    "examples_dirs": ["../tutorials"],
-    "exclude_implicit_doc": {},  # set
-    "filename_pattern": r"\d{2}_",
-    "gallery_dirs": ["generated/tutorials"],
-    "line_numbers": False,
-    "plot_gallery": "True",  # str, to enable overwrite from CLI without warning
-    "reference_url": {f"{package}": None},
-    "remove_config_comments": True,
-    "show_memory": True,
-    "within_subsection_order": FileNameSortKey,
-}
 
 # -- linkcheck -------------------------------------------------------------------------
 linkcheck_anchors = False  # saves a bit of time

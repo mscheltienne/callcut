@@ -4,7 +4,7 @@ from io import StringIO
 
 import pytest
 
-from template.utils.config import _get_gpu_info, sys_info
+from callcut.utils.config import _get_gpu_info, sys_info
 
 
 def test_sys_info() -> None:

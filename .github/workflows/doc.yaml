@@ -24,7 +24,7 @@ jobs:
         with:
           activate-environment: true
       - run: uv sync -q --no-default-groups --group doc
-      - run: template sys-info --developer
+      - run: callcut sys-info --developer
       - run: make -C doc html
       - name: Prune sphinx environment
         run: rm -R ./doc/_build/html/.doctrees
@@ -34,7 +34,7 @@ jobs:
           path: ./doc/_build/html
 
   deploy:
-    if: ${{ github.repository == 'mscheltienne/template-python' && github.event_name == 'push' }}
+    if: ${{ github.repository == 'mscheltienne/callcut' && github.event_name == 'push' }}
     needs: build
     timeout-minutes: 10
     runs-on: ubuntu-latest

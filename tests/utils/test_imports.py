@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from template.utils._imports import import_optional_dependency
+from callcut.utils._imports import import_optional_dependency
 
 
 def test_import_optional_dependency() -> None:

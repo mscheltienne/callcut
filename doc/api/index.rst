@@ -2,7 +2,7 @@ API References
 ==============
 
 This is the reference for classes (``CamelCase`` names) and functions
-(``underscore_case`` names) of ``template-python`` grouped thematically.
+(``underscore_case`` names) of ``callcut`` grouped thematically.
 
 .. toctree::
     :maxdepth: 2
