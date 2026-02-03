@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import torch
-import torchaudio
 from torch import Tensor
+from torchcodec.decoders import AudioDecoder
 from torch.utils.data import Dataset
 
 from callcut.data._labels import intervals_to_frame_labels
@@ -164,14 +164,13 @@ class CallDataset(Dataset):
 
     def _index_recording(self, audio_path: Path, annotation_path: Path) -> None:
         """Index a recording without loading features into memory."""
-        # Get audio duration using torchaudio.info (lightweight, no full load)
+        # Get audio duration using torchcodec (lightweight, no full decode)
         try:
-            info = torchaudio.info(audio_path)
+            decoder = AudioDecoder(str(audio_path))
+            duration_s = decoder.metadata.duration_seconds
         except Exception as exc:
             logger.error("Failed to read info for %s: %s", audio_path.name, exc)
             return
-
-        duration_s = info.num_frames / info.sample_rate
 
         # Estimate number of feature frames
         n_frames = self._extractor.seconds_to_frames(duration_s)
