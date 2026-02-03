@@ -9,11 +9,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
+import torch
 
 if TYPE_CHECKING:
     from typing import Any
-
-    import torch
 
 
 def ensure_int(item: Any, item_name: str | None = None) -> int:

@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import torch
 import torchaudio
 from torch import Tensor
 
-from callcut.utils._checks import check_type, ensure_int, ensure_path
+from callcut.utils._checks import check_type, ensure_device, ensure_int, ensure_path
 from callcut.utils.logs import logger
 
 if TYPE_CHECKING:
@@ -19,6 +20,7 @@ def load_audio(
     *,
     sample_rate: int | None = None,
     mono: bool = True,
+    device: str | torch.device | None = None,
 ) -> tuple[Tensor, int]:
     """Load an audio file.
 
@@ -34,6 +36,9 @@ def load_audio(
         If specified, the audio is resampled to this rate.
     mono : bool
         If ``True``, convert multi-channel audio to mono by averaging channels.
+    device : str | torch.device | None
+        Device to place the loaded tensor on (e.g., ``"cpu"``, ``"cuda:0"``, ``"mps"``).
+        If ``None``, uses the default torch device.
 
     Returns
     -------
@@ -56,12 +61,19 @@ def load_audio(
     >>> waveform, sr = load_audio("recording.wav", sample_rate=16000)
     >>> sr
     16000
+
+    Load directly to GPU:
+
+    >>> waveform, sr = load_audio("recording.wav", device="cuda:0")
+    >>> waveform.device
+    device(type='cuda', index=0)
     """
     fname = ensure_path(fname, must_exist=True)
     check_type(sample_rate, ("int-like", None), "sample_rate")
     if sample_rate is not None:
         sample_rate = ensure_int(sample_rate, "sample_rate")
     check_type(mono, (bool,), "mono")
+    device = ensure_device(device)
     if sample_rate is not None and sample_rate <= 0:
         raise ValueError(
             f"Argument 'sample_rate' must be a positive integer, got {sample_rate}."
@@ -87,5 +99,9 @@ def load_audio(
     if mono and waveform.shape[0] > 1:
         logger.debug("Converting %d channels to mono", waveform.shape[0])
         waveform = waveform.mean(dim=0, keepdim=True)
+
+    # move to device
+    waveform = waveform.to(device)
+    logger.debug("Moved waveform to device: %s", device)
 
     return waveform, original_sr
