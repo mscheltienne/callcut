@@ -126,20 +126,14 @@ numpydoc_show_inherited_class_members = {
 # x-ref
 numpydoc_xref_param_type = True
 numpydoc_xref_aliases = {
-    # Matplotlib
-    "Axes": "matplotlib.axes.Axes",
-    "Figure": "matplotlib.figure.Figure",
-    # MNE
-    "DigMontage": "mne.channels.DigMontage",
-    "Epochs": "mne.Epochs",
-    "Evoked": "mne.Evoked",
-    "Info": "mne.Info",
-    "Projection": "mne.Projection",
-    "Raw": "mne.io.Raw",
     # Python
     "bool": ":class:`python:bool`",
     "Path": "pathlib.Path",
     "TextIO": "io.TextIOBase",
+    # Torch
+    "Tensor": "torch.Tensor",
+    # callcut
+    "BaseDetector": "callcut.nn.BaseDetector",
 }
 numpydoc_xref_ignore = {
     "of",

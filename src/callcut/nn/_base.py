@@ -131,91 +131,99 @@ class BaseDetector(ABC, nn.Module):
         ...     return {}
         """
 
-    def save(self, fname: str | Path, *, overwrite: bool = False) -> None:
-        """Save model state to a file.
 
-        Saves both the model state dict and metadata (class name, n_bands,
-        receptive_field) needed for reconstruction.
+def save_model(
+    model: BaseDetector,
+    fname: str | Path,
+    *,
+    overwrite: bool = False,
+) -> None:
+    """Save a model to a file.
 
-        Parameters
-        ----------
-        fname : str | Path
-            Path to save the model. Conventionally use ``.pt`` extension.
-        overwrite : bool
-            If ``True``, overwrite the file if it exists. If ``False``, raises
-            an error if the file already exists.
+    Saves both the model state dict and metadata (class name, n_bands, receptive_field)
+    needed for reconstruction.
 
-        See Also
-        --------
-        load : Load a model from a file.
+    Parameters
+    ----------
+    model : BaseDetector
+        The model to save.
+    fname : str | Path
+        Path to save the model. Conventionally use ``.pt`` extension.
+    overwrite : bool
+        If ``True``, overwrite the file if it exists. If ``False``, raises
+        an error if the file already exists.
 
-        Examples
-        --------
-        >>> model = TinySegCNN(n_bands=8)
-        >>> model.save("my_model.pt")
-        """
-        fname = ensure_path(fname, must_exist=False)
-        if not overwrite and fname.exists():
-            raise FileExistsError(
-                f"File {fname} already exists. Use overwrite=True to replace it."
-            )
-        logger.info("Saving model to %s", fname)
-        checkpoint = {
-            "class_name": self.__class__.__name__,
-            "n_bands": self._n_bands,
-            "receptive_field": self.receptive_field,
-            "state_dict": self.state_dict(),
-            "kwargs": self._save_kwargs(),
-        }
-        torch.save(checkpoint, fname)
+    See Also
+    --------
+    load_model : Load a model from a file.
 
-    @classmethod
-    def load(
-        cls,
-        fname: str | Path,
-        *,
-        device: str | torch.device | None = None,
-    ) -> BaseDetector:
-        """Load a model from a file.
-
-        Parameters
-        ----------
-        fname : str | Path
-            Path to the saved model file.
-        device : str | torch.device | None
-            Device to load the model to (e.g., ``"cpu"``, ``"cuda:0"``, ``"mps"``).
-            If ``None``, uses the default torch device.
-
-        Returns
-        -------
-        model : BaseDetector
-            The loaded model instance.
-
-        See Also
-        --------
-        save : Save a model to a file.
-
-        Examples
-        --------
-        >>> model = BaseDetector.load("my_model.pt")
-        >>> model = BaseDetector.load("my_model.pt", device="cpu")
-        """
-        fname = ensure_path(fname, must_exist=True)
-        device = ensure_device(device)
-        logger.info("Loading model from %s", fname)
-        checkpoint = torch.load(fname, map_location=device, weights_only=False)
-
-        class_name = checkpoint["class_name"]
-        n_bands = checkpoint["n_bands"]
-        kwargs = checkpoint.get("kwargs", {})
-
-        model = get_model(class_name, n_bands=n_bands, **kwargs)
-        model.load_state_dict(checkpoint["state_dict"])
-        model = model.to(device)
-        logger.debug(
-            "Loaded %s with n_bands=%d, receptive_field=%d",
-            class_name,
-            n_bands,
-            model.receptive_field,
+    Examples
+    --------
+    >>> model = TinySegCNN(n_bands=8)
+    >>> save_model(model, "my_model.pt")
+    """
+    check_type(model, (BaseDetector,), "model")
+    fname = ensure_path(fname, must_exist=False)
+    if not overwrite and fname.exists():
+        raise FileExistsError(
+            f"File {fname} already exists. Use overwrite=True to replace it."
         )
-        return model
+    logger.info("Saving model to %s", fname)
+    checkpoint = {
+        "class_name": model.__class__.__name__,
+        "n_bands": model.n_bands,
+        "receptive_field": model.receptive_field,
+        "state_dict": model.state_dict(),
+        "kwargs": model._save_kwargs(),
+    }
+    torch.save(checkpoint, fname)
+
+
+def load_model(
+    fname: str | Path,
+    *,
+    device: str | torch.device | None = None,
+) -> BaseDetector:
+    """Load a model from a file.
+
+    Parameters
+    ----------
+    fname : str | Path
+        Path to the saved model file.
+    device : str | torch.device | None
+        Device to load the model to (e.g., ``"cpu"``, ``"cuda:0"``, ``"mps"``).
+        If ``None``, uses the default torch device.
+
+    Returns
+    -------
+    model : BaseDetector
+        The loaded model instance.
+
+    See Also
+    --------
+    save_model : Save a model to a file.
+
+    Examples
+    --------
+    >>> model = load_model("my_model.pt")
+    >>> model = load_model("my_model.pt", device="cpu")
+    """
+    fname = ensure_path(fname, must_exist=True)
+    device = ensure_device(device)
+    logger.info("Loading model from %s", fname)
+    checkpoint = torch.load(fname, map_location=device, weights_only=False)
+
+    class_name = checkpoint["class_name"]
+    n_bands = checkpoint["n_bands"]
+    kwargs = checkpoint.get("kwargs", {})
+
+    model = get_model(class_name, n_bands=n_bands, **kwargs)
+    model.load_state_dict(checkpoint["state_dict"])
+    model = model.to(device)
+    logger.debug(
+        "Loaded %s with n_bands=%d, receptive_field=%d",
+        class_name,
+        n_bands,
+        model.receptive_field,
+    )
+    return model

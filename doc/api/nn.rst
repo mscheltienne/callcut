@@ -20,6 +20,14 @@ Built-in models
     BaseDetector
     TinySegCNN
 
+The following utility allow an I/O roundtrip of the models:
+
+.. autosummary::
+    :toctree: ../generated/api
+
+    load_model
+    save_model
+
 Registry
 ~~~~~~~~
 
