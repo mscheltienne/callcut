@@ -6,13 +6,13 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import numpy as np
+import torch
 
 from callcut.evaluation._types import Interval
 from callcut.utils._checks import check_type
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
-    from torch import Tensor
 
 
 class BaseDecoder(ABC):
@@ -35,7 +35,9 @@ class BaseDecoder(ABC):
     """
 
     @abstractmethod
-    def decode(self, times: Tensor, probabilities: Tensor) -> list[Interval]:
+    def decode(
+        self, times: torch.Tensor, probabilities: torch.Tensor
+    ) -> list[Interval]:
         """Convert frame probabilities to a list of time intervals.
 
         Parameters
@@ -181,7 +183,9 @@ class HysteresisDecoder(BaseDecoder):
         """
         return self._pad_s
 
-    def decode(self, times: Tensor, probabilities: Tensor) -> list[Interval]:
+    def decode(
+        self, times: torch.Tensor, probabilities: torch.Tensor
+    ) -> list[Interval]:
         """Convert frame probabilities to a list of time intervals.
 
         Parameters
@@ -197,8 +201,8 @@ class HysteresisDecoder(BaseDecoder):
         intervals : list of Interval
             Detected call intervals, sorted by onset time.
         """
-        check_type(times, ("tensor",), "times")
-        check_type(probabilities, ("tensor",), "probabilities")
+        check_type(times, (torch.Tensor,), "times")
+        check_type(probabilities, (torch.Tensor,), "probabilities")
 
         # Convert to numpy for processing
         times_np = times.detach().cpu().numpy().astype(np.float64)
