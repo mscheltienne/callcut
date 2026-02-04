@@ -354,6 +354,22 @@ class SNRExtractor(BaseExtractor):
 
         return features, times
 
+    def __hash__(self) -> int:
+        """Return hash based on all parameters that affect output."""
+        return hash(
+            (
+                self._sample_rate,
+                self._hop_ms,
+                self._n_bands,
+                self._win_ms,
+                self._band_low,
+                self._band_high,
+                self._baseline_s,
+                self._normalize,
+                self._eps,
+            )
+        )
+
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}("

@@ -2,18 +2,50 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 
 import torch
 from torch import Tensor
-from torchcodec.decoders import AudioDecoder
 from torch.utils.data import Dataset
+from torchcodec.decoders import AudioDecoder
 
 from callcut.data._labels import intervals_to_frame_labels
 from callcut.features import BaseExtractor
 from callcut.io import load_annotations, load_audio
 from callcut.utils._checks import check_type, ensure_int, ensure_path
 from callcut.utils.logs import logger, warn
+
+
+@lru_cache(maxsize=400)
+def _load_recording(
+    audio_path: Path,
+    annotation_path: Path,
+    extractor: BaseExtractor,
+) -> tuple[Tensor, Tensor]:
+    """Load audio and extract features with LRU caching.
+
+    Parameters
+    ----------
+    audio_path : Path
+        Path to audio file.
+    annotation_path : Path
+        Path to annotation CSV file.
+    extractor : BaseExtractor
+        Feature extractor (must be hashable).
+
+    Returns
+    -------
+    features : Tensor
+        Extracted features of shape ``(n_features, n_frames)``.
+    labels : Tensor
+        Per-frame binary labels of shape ``(n_frames,)``.
+    """
+    waveform, _ = load_audio(audio_path, sample_rate=extractor.sample_rate, mono=True)
+    features, times = extractor(waveform)
+    intervals = load_annotations(annotation_path)
+    labels = intervals_to_frame_labels(intervals, times)
+    return features, labels
 
 
 class CallDataset(Dataset):
@@ -207,24 +239,6 @@ class CallDataset(Dataset):
             len(starts),
         )
 
-    def _load_recording(self, recording_idx: int) -> tuple[Tensor, Tensor]:
-        """Load and extract features for a recording (called on-demand)."""
-        audio_path, annotation_path = self._recordings[recording_idx]
-
-        # Load audio
-        waveform, _ = load_audio(
-            audio_path, sample_rate=self._extractor.sample_rate, mono=True
-        )
-
-        # Extract features
-        features, times = self._extractor(waveform)
-
-        # Load annotations and generate labels
-        intervals = load_annotations(annotation_path)
-        labels = intervals_to_frame_labels(intervals, times)
-
-        return features, labels
-
     def __len__(self) -> int:
         """Return the number of windows in the dataset."""
         return len(self._index)
@@ -251,9 +265,10 @@ class CallDataset(Dataset):
             )
 
         recording_idx, start = self._index[idx]
+        audio_path, annotation_path = self._recordings[recording_idx]
 
-        # Load features and labels on-demand
-        features, labels = self._load_recording(recording_idx)
+        # Load features and labels (cached)
+        features, labels = _load_recording(audio_path, annotation_path, self._extractor)
 
         # Handle edge case: actual frames may differ slightly from estimate
         n_frames = features.shape[1]
@@ -351,8 +366,8 @@ class CallDataset(Dataset):
         total_positive = 0.0
         total_frames = 0.0
 
-        for recording_idx in range(len(self._recordings)):
-            _, labels = self._load_recording(recording_idx)
+        for audio_path, annotation_path in self._recordings:
+            _, labels = _load_recording(audio_path, annotation_path, self._extractor)
             total_positive += labels.sum().item()
             total_frames += labels.numel()
 

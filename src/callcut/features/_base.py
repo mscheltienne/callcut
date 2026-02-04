@@ -101,6 +101,20 @@ class BaseExtractor(ABC):
         return 1000.0 / self.hop_ms
 
     @abstractmethod
+    def __hash__(self) -> int:
+        """Return hash based on extractor configuration.
+
+        Subclasses must implement this to enable caching of extracted features.
+        The hash should be based on all parameters that affect the output.
+        """
+
+    def __eq__(self, other: object) -> bool:
+        """Check equality based on extractor configuration."""
+        if not isinstance(other, BaseExtractor):
+            return False
+        return hash(self) == hash(other)
+
+    @abstractmethod
     def extract(self, waveform: Tensor) -> tuple[Tensor, Tensor]:
         """Extract features from a waveform.
 
