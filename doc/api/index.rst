@@ -9,4 +9,6 @@ This is the reference for classes (``CamelCase`` names) and functions
 
     io.rst
     nn.rst
+    inference.rst
+    metrics.rst
     logging.rst

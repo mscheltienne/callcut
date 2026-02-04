@@ -22,7 +22,7 @@ def compute_frame_metrics(
     ----------
     probabilities : Tensor
         Predicted probabilities of shape ``(n_frames,)``, with values in ``[0, 1]``.
-        Typically from :func:`~callcut.inference.predict_recording`.
+        Typically from :meth:`~callcut.nn.BaseDetector.predict`.
     labels : Tensor
         Ground truth labels of shape ``(n_frames,)``, with values ``0`` (no call)
         or ``1`` (call). Typically from :func:`~callcut.data.intervals_to_frame_labels`.

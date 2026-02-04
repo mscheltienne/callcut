@@ -54,14 +54,16 @@ class TestGetModel:
 
     def test_basic(self) -> None:
         """Test getting a registered model."""
-        model = get_model("TinySegCNN", n_bands=8)
+        model = get_model("TinySegCNN", n_bands=8, window_frames=250)
         assert isinstance(model, BaseDetector)
         assert model.n_bands == 8
+        assert model.window_frames == 250
 
     def test_with_kwargs(self) -> None:
         """Test passing additional kwargs."""
-        model = get_model("TinySegCNN", n_bands=4, base=16)
+        model = get_model("TinySegCNN", n_bands=4, window_frames=100, base=16)
         assert model.n_bands == 4
+        assert model.window_frames == 100
         assert model.base == 16
 
     def test_invalid_name(self) -> None:
@@ -71,9 +73,10 @@ class TestGetModel:
 
     def test_custom_model(self, registered_dummy_model: type[_DummyModel]) -> None:
         """Test getting a custom registered model."""
-        model = get_model("_DummyModel", n_bands=4)
+        model = get_model("_DummyModel", n_bands=4, window_frames=100)
         assert isinstance(model, registered_dummy_model)
         assert model.n_bands == 4
+        assert model.window_frames == 100
 
 
 class TestRegisterUnregister:

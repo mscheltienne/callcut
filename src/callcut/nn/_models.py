@@ -34,6 +34,11 @@ class BaseDetector(ABC, nn.Module):
     ----------
     n_bands : int
         Number of input frequency bands.
+    window_frames : int
+        Number of frames per input window. This determines the temporal context the
+        model sees during training and inference. The corresponding duration in seconds
+        depends on the feature extractor's hop size:
+        ``window_duration_s = window_frames * hop_ms / 1000``.
 
     Notes
     -----
@@ -47,8 +52,8 @@ class BaseDetector(ABC, nn.Module):
     Create a custom model by subclassing :class:`BaseDetector`:
 
     >>> class MyModel(BaseDetector):
-    ...     def __init__(self, n_bands: int = 8):
-    ...         super().__init__(n_bands)
+    ...     def __init__(self, n_bands: int, window_frames: int):
+    ...         super().__init__(n_bands, window_frames)
     ...         self._conv = nn.Conv1d(n_bands, 1, kernel_size=5, padding=2)
     ...
     ...     @property
@@ -62,15 +67,21 @@ class BaseDetector(ABC, nn.Module):
     ...         return {}  # no additional constructor args
     """
 
-    def __init__(self, n_bands: int) -> None:
+    def __init__(self, n_bands: int, window_frames: int) -> None:
         super().__init__()
-        check_type(n_bands, ("int-like",), "n_bands")
         n_bands = ensure_int(n_bands, "n_bands")
+        window_frames = ensure_int(window_frames, "window_frames")
         if n_bands <= 0:
             raise ValueError(
                 f"Argument 'n_bands' must be a positive integer, got {n_bands}."
             )
+        if window_frames <= 0:
+            raise ValueError(
+                f"Argument 'window_frames' must be a positive integer, "
+                f"got {window_frames}."
+            )
         self._n_bands = n_bands
+        self._window_frames = window_frames
 
     @property
     def n_bands(self) -> int:
@@ -79,6 +90,17 @@ class BaseDetector(ABC, nn.Module):
         :type: :class:`int`
         """
         return self._n_bands
+
+    @property
+    def window_frames(self) -> int:
+        """Number of frames per input window.
+
+        The corresponding duration in seconds depends on the feature extractor's hop
+        size: ``window_duration_s = window_frames * hop_ms / 1000``.
+
+        :type: :class:`int`
+        """
+        return self._window_frames
 
     @property
     @abstractmethod
@@ -111,7 +133,8 @@ class BaseDetector(ABC, nn.Module):
         """Return additional constructor kwargs needed for model reconstruction.
 
         Subclasses should override this to return a dictionary of any constructor
-        arguments beyond ``n_bands`` that are needed to recreate the model.
+        arguments beyond ``n_bands`` and ``window_frames`` that are needed to recreate
+        the model.
 
         Returns
         -------
@@ -131,6 +154,140 @@ class BaseDetector(ABC, nn.Module):
         ...     return {}
         """
 
+    def predict(self, features: Tensor, *, hop_frames: int | None = None) -> Tensor:
+        """Run sliding window inference on a full recording.
+
+        The model is applied to overlapping windows across the recording. Where windows
+        overlap, predictions are averaged to produce smoother, more robust per-frame
+        probability estimates.
+
+        Parameters
+        ----------
+        features : Tensor
+            Input features of shape ``(n_bands, n_frames)``. Should be on the same
+            device as the model.
+        hop_frames : int | None
+            Hop between consecutive windows in frames. Smaller values produce more
+            overlap and smoother predictions but increase computation time. If ``None``,
+            defaults to ``window_frames // 4`` (75% overlap).
+
+        Returns
+        -------
+        probabilities : Tensor
+            Per-frame call probabilities of shape ``(n_frames,)``. Values are in
+            ``[0, 1]``, where higher values indicate higher confidence that a call
+            is present.
+
+        Notes
+        -----
+        The inference process:
+
+        1. Slide a window of size :attr:`window_frames` across the recording with step
+           ``hop_frames``.
+        2. For each window, run the model to get logits, then apply sigmoid to get
+           probabilities.
+        3. Accumulate predictions for each frame. Frames covered by multiple windows
+           receive multiple predictions.
+        4. Average the accumulated predictions to get final per-frame probabilities.
+
+        For frames near the end of the recording that don't fit a full window, the
+        window is padded using edge values.
+
+        Examples
+        --------
+        >>> from callcut.nn import load_model
+        >>> from callcut.features import SNRExtractor
+        >>> from callcut.io import load_audio
+        >>>
+        >>> model = load_model("detector.pt", device="cpu")
+        >>> extractor = SNRExtractor(sample_rate=32000, hop_ms=8.0, n_bands=8)
+        >>>
+        >>> waveform, sr = load_audio("recording.wav", sample_rate=32000)
+        >>> features, times = extractor(waveform)
+        >>>
+        >>> probs = model.predict(features)
+        >>> probs.shape
+        torch.Size([1234])
+        """
+        check_type(features, (torch.Tensor,), "features")
+        hop_frames = (
+            self._window_frames // 4
+            if hop_frames is None
+            else ensure_int(hop_frames, "hop_frames")
+        )
+
+        if hop_frames <= 0:
+            raise ValueError(
+                f"Argument 'hop_frames' must be positive, got {hop_frames}."
+            )
+        if hop_frames > self._window_frames:
+            raise ValueError(
+                f"Argument 'hop_frames' ({hop_frames}) cannot be greater "
+                f"than 'window_frames' ({self._window_frames})."
+            )
+
+        if features.dim() != 2:
+            raise ValueError(
+                "Argument 'features' must be 2D (n_bands, n_frames), got "
+                f"{features.dim()}D."
+            )
+
+        device = features.device
+        dtype = features.dtype
+        n_bands, n_frames = features.shape
+
+        if n_bands != self._n_bands:
+            raise ValueError(
+                f"Feature bands ({n_bands}) do not match model input bands "
+                f"({self._n_bands})."
+            )
+
+        # Initialize accumulators
+        prob_sum = torch.zeros(n_frames, dtype=dtype, device=device)
+        prob_count = torch.zeros(n_frames, dtype=dtype, device=device)
+
+        # Compute window start positions
+        if n_frames <= self._window_frames:
+            starts = [0]
+        else:
+            starts = list(range(0, n_frames - self._window_frames + 1, hop_frames))
+            if not starts:
+                starts = [0]
+
+        # Run inference
+        self.eval()
+        with torch.no_grad():
+            for start in starts:
+                end = start + self._window_frames
+
+                # Extract window
+                if end <= n_frames:
+                    window = features[:, start:end]
+                else:
+                    # Pad with edge values if window extends beyond recording
+                    available = features[:, start:n_frames]
+                    pad_size = end - n_frames
+                    padding = features[:, -1:].expand(-1, pad_size)
+                    window = torch.cat([available, padding], dim=1)
+
+                # Run model: (n_bands, window_frames) -> add batch -> model -> remove
+                logits = self(window.unsqueeze(0)).squeeze(0)
+
+                # Convert logits to probabilities
+                probs = torch.sigmoid(logits)
+
+                # Accumulate (only for valid frames, not padding)
+                valid_end = min(n_frames, end)
+                valid_len = valid_end - start
+                prob_sum[start:valid_end] += probs[:valid_len]
+                prob_count[start:valid_end] += 1.0
+
+        # Average predictions
+        prob_count = torch.clamp(prob_count, min=1e-12)
+        probabilities = prob_sum / prob_count
+
+        return probabilities
+
 
 @register_model
 class TinySegCNN(BaseDetector):
@@ -144,6 +301,10 @@ class TinySegCNN(BaseDetector):
     ----------
     n_bands : int
         Number of input frequency bands.
+    window_frames : int
+        Number of frames per input window. The corresponding duration in seconds depends
+        on the feature extractor's hop size:
+        ``window_duration_s = window_frames * hop_ms / 1000``.
     base : int
         Base number of filters (channels in hidden layers).
 
@@ -162,15 +323,15 @@ class TinySegCNN(BaseDetector):
 
     Examples
     --------
-    >>> model = TinySegCNN(n_bands=8, base=32)
+    >>> model = TinySegCNN(n_bands=8, window_frames=250)
     >>> x = torch.randn(4, 8, 250)  # batch=4, bands=8, time=250
     >>> logits = model(x)
     >>> logits.shape
     torch.Size([4, 250])
     """
 
-    def __init__(self, n_bands: int = 8, base: int = 32) -> None:
-        super().__init__(n_bands)
+    def __init__(self, n_bands: int, window_frames: int, base: int = 32) -> None:
+        super().__init__(n_bands, window_frames)
         check_type(base, ("int-like",), "base")
         base = ensure_int(base, "base")
         if base <= 0:
@@ -229,8 +390,8 @@ def save_model(
 ) -> None:
     """Save a model to a file.
 
-    Saves both the model state dict and metadata (class name, n_bands, receptive_field)
-    needed for reconstruction.
+    Saves both the model state dict and metadata (class name, n_bands, window_frames,
+    receptive_field) needed for reconstruction.
 
     Parameters
     ----------
@@ -248,7 +409,7 @@ def save_model(
 
     Examples
     --------
-    >>> model = TinySegCNN(n_bands=8)
+    >>> model = TinySegCNN(n_bands=8, window_frames=250)
     >>> save_model(model, "my_model.pt")
     """
     check_type(model, (BaseDetector,), "model")
@@ -261,6 +422,7 @@ def save_model(
     checkpoint = {
         "class_name": model.__class__.__name__,
         "n_bands": model.n_bands,
+        "window_frames": model.window_frames,
         "receptive_field": model.receptive_field,
         "state_dict": model.state_dict(),
         "kwargs": model._save_kwargs(),
@@ -304,15 +466,19 @@ def load_model(
 
     class_name = checkpoint["class_name"]
     n_bands = checkpoint["n_bands"]
+    window_frames = checkpoint["window_frames"]
     kwargs = checkpoint.get("kwargs", {})
 
-    model = get_model(class_name, n_bands=n_bands, **kwargs)
+    model = get_model(
+        class_name, n_bands=n_bands, window_frames=window_frames, **kwargs
+    )
     model.load_state_dict(checkpoint["state_dict"])
     model = model.to(device)
     logger.debug(
-        "Loaded %s with n_bands=%d, receptive_field=%d",
+        "Loaded %s with n_bands=%d, window_frames=%d, receptive_field=%d",
         class_name,
         n_bands,
+        window_frames,
         model.receptive_field,
     )
     return model

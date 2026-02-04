@@ -26,8 +26,8 @@ if TYPE_CHECKING:
 class _CustomModel(BaseDetector):
     """A custom model with extra kwargs for testing save/load."""
 
-    def __init__(self, n_bands: int = 8, hidden: int = 16) -> None:
-        super().__init__(n_bands)
+    def __init__(self, n_bands: int, window_frames: int, hidden: int = 16) -> None:
+        super().__init__(n_bands, window_frames)
         self._hidden = hidden
         self._layer = torch.nn.Linear(n_bands, 1)
 
@@ -60,18 +60,34 @@ class TestBaseDetector:
     def test_n_bands_validation(self) -> None:
         """Test n_bands parameter validation."""
         with pytest.raises(ValueError, match="positive integer"):
-            TinySegCNN(n_bands=0)
+            TinySegCNN(n_bands=0, window_frames=100)
 
         with pytest.raises(ValueError, match="positive integer"):
-            TinySegCNN(n_bands=-1)
+            TinySegCNN(n_bands=-1, window_frames=100)
 
         with pytest.raises(TypeError):
-            TinySegCNN(n_bands="invalid")
+            TinySegCNN(n_bands="invalid", window_frames=100)
+
+    def test_window_frames_validation(self) -> None:
+        """Test window_frames parameter validation."""
+        with pytest.raises(ValueError, match="positive integer"):
+            TinySegCNN(n_bands=8, window_frames=0)
+
+        with pytest.raises(ValueError, match="positive integer"):
+            TinySegCNN(n_bands=8, window_frames=-1)
+
+        with pytest.raises(TypeError):
+            TinySegCNN(n_bands=8, window_frames="invalid")
 
     def test_n_bands_property(self) -> None:
         """Test n_bands property returns correct value."""
-        model = TinySegCNN(n_bands=4)
+        model = TinySegCNN(n_bands=4, window_frames=100)
         assert model.n_bands == 4
+
+    def test_window_frames_property(self) -> None:
+        """Test window_frames property returns correct value."""
+        model = TinySegCNN(n_bands=8, window_frames=250)
+        assert model.window_frames == 250
 
 
 class TestSaveLoad:
@@ -79,7 +95,7 @@ class TestSaveLoad:
 
     def test_save_and_load(self, tmp_path: Path) -> None:
         """Test saving and loading a model preserves attributes."""
-        model = TinySegCNN(n_bands=8, base=16)
+        model = TinySegCNN(n_bands=8, window_frames=250, base=16)
         save_path = tmp_path / "model.pt"
 
         assert not save_path.exists()
@@ -89,12 +105,13 @@ class TestSaveLoad:
         loaded = load_model(save_path)
         assert isinstance(loaded, TinySegCNN)
         assert loaded.n_bands == 8
+        assert loaded.window_frames == 250
         assert loaded.base == 16
         assert loaded.receptive_field == model.receptive_field
 
     def test_save_overwrite(self, tmp_path: Path) -> None:
         """Test overwrite behavior."""
-        model = TinySegCNN(n_bands=8)
+        model = TinySegCNN(n_bands=8, window_frames=100)
         save_path = tmp_path / "model.pt"
         save_model(model, save_path)
 
@@ -105,7 +122,7 @@ class TestSaveLoad:
 
     def test_load_preserves_weights(self, tmp_path: Path) -> None:
         """Test that loaded model produces identical outputs."""
-        model = TinySegCNN(n_bands=8)
+        model = TinySegCNN(n_bands=8, window_frames=100)
         x = torch.randn(1, 8, 100)
 
         with torch.no_grad():
@@ -129,54 +146,55 @@ class TestSaveLoad:
         self, tmp_path: Path, registered_custom_model: type[_CustomModel]
     ) -> None:
         """Test save/load preserves custom model kwargs."""
-        model = registered_custom_model(n_bands=4, hidden=32)
+        model = registered_custom_model(n_bands=4, window_frames=100, hidden=32)
         save_path = tmp_path / "custom_model.pt"
         save_model(model, save_path)
 
         loaded = load_model(save_path)
         assert isinstance(loaded, registered_custom_model)
         assert loaded.n_bands == 4
+        assert loaded.window_frames == 100
         assert loaded.hidden == 32
 
 
 class TestTinySegCNN:
     """Tests for TinySegCNN model."""
 
-    def test_default_params(self) -> None:
-        """Test construction with default parameters."""
-        model = TinySegCNN()
-        assert model.n_bands == 8
+    def test_default_base(self) -> None:
+        """Test construction with default base parameter."""
+        model = TinySegCNN(n_bands=8, window_frames=250)
         assert model.base == 32
 
     def test_custom_params(self) -> None:
         """Test construction with custom parameters."""
-        model = TinySegCNN(n_bands=4, base=16)
+        model = TinySegCNN(n_bands=4, window_frames=100, base=16)
         assert model.n_bands == 4
+        assert model.window_frames == 100
         assert model.base == 16
 
     def test_base_validation(self) -> None:
         """Test base parameter validation."""
         with pytest.raises(ValueError, match="positive integer"):
-            TinySegCNN(base=0)
+            TinySegCNN(n_bands=8, window_frames=100, base=0)
 
         with pytest.raises(ValueError, match="positive integer"):
-            TinySegCNN(base=-1)
+            TinySegCNN(n_bands=8, window_frames=100, base=-1)
 
     def test_receptive_field(self) -> None:
         """Test receptive field property."""
-        model = TinySegCNN()
+        model = TinySegCNN(n_bands=8, window_frames=250)
         assert model.receptive_field > 0, "Receptive field should be positive"
 
     def test_forward_shape(self) -> None:
         """Test forward pass produces correct output shape."""
-        model = TinySegCNN(n_bands=8, base=32)
+        model = TinySegCNN(n_bands=8, window_frames=250, base=32)
         x = torch.randn(4, 8, 250)  # batch=4, bands=8, time=250
         output = model(x)
         assert output.shape == (4, 250)
 
     def test_forward_various_lengths(self) -> None:
         """Test that output time dimension equals input time dimension."""
-        model = TinySegCNN(n_bands=8)
+        model = TinySegCNN(n_bands=8, window_frames=250)
         for time_steps in [100, 250, 500]:
             x = torch.randn(2, 8, time_steps)
             output = model(x)
