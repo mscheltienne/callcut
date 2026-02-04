@@ -6,7 +6,6 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import numpy as np
-import torch
 
 from callcut.evaluation._types import Interval
 from callcut.utils._checks import check_type
@@ -36,19 +35,16 @@ class BaseDecoder(ABC):
     """
 
     @abstractmethod
-    def decode(
-        self,
-        times: Tensor | NDArray[np.floating],
-        probabilities: Tensor | NDArray[np.floating],
-    ) -> list[Interval]:
+    def decode(self, times: Tensor, probabilities: Tensor) -> list[Interval]:
         """Convert frame probabilities to a list of time intervals.
 
         Parameters
         ----------
-        times : Tensor | NDArray
-            Time axis of shape ``(n_frames,)`` in seconds.
-        probabilities : Tensor | NDArray
-            Per-frame probabilities of shape ``(n_frames,)``, values in ``[0, 1]``.
+        times : Tensor of shape ``(n_frames,)``
+            Time axis of shape ``(n_frames,)`` in seconds, from the feature extractor.
+        probabilities : Tensor of shape ``(n_frames,)``
+            Per-frame probabilities of shape ``(n_frames,)``, values in ``[0, 1]``,
+            from :meth:`~callcut.nn.BaseDetector.predict`.
 
         Returns
         -------
@@ -185,60 +181,53 @@ class HysteresisDecoder(BaseDecoder):
         """
         return self._pad_s
 
-    def decode(
-        self,
-        times: Tensor | NDArray[np.floating],
-        probabilities: Tensor | NDArray[np.floating],
-    ) -> list[Interval]:
+    def decode(self, times: Tensor, probabilities: Tensor) -> list[Interval]:
         """Convert frame probabilities to a list of time intervals.
 
         Parameters
         ----------
-        times : Tensor | NDArray
-            Time axis of shape ``(n_frames,)`` in seconds.
-        probabilities : Tensor | NDArray
-            Per-frame probabilities of shape ``(n_frames,)``, values in ``[0, 1]``.
+        times : Tensor of shape ``(n_frames,)``
+            Time axis of shape ``(n_frames,)`` in seconds, from the feature extractor.
+        probabilities : Tensor of shape ``(n_frames,)``
+            Per-frame probabilities of shape ``(n_frames,)``, values in ``[0, 1]``,
+            from :meth:`~callcut.nn.BaseDetector.predict`.
 
         Returns
         -------
         intervals : list of Interval
             Detected call intervals, sorted by onset time.
         """
+        check_type(times, ("tensor",), "times")
+        check_type(probabilities, ("tensor",), "probabilities")
+
         # Convert to numpy for processing
-        if isinstance(times, torch.Tensor):
-            times = times.detach().cpu().numpy()
-        if isinstance(probabilities, torch.Tensor):
-            probabilities = probabilities.detach().cpu().numpy()
+        times_np = times.detach().cpu().numpy().astype(np.float64)
+        probs_np = probabilities.detach().cpu().numpy().astype(np.float64)
 
-        times = np.asarray(times, dtype=np.float64)
-        probabilities = np.asarray(probabilities, dtype=np.float64)
-
-        if times.ndim != 1:
-            raise ValueError(f"times must be 1D, got shape {times.shape}.")
-        if probabilities.ndim != 1:
-            raise ValueError(
-                f"probabilities must be 1D, got shape {probabilities.shape}."
-            )
-        if times.size != probabilities.size:
+        if times_np.ndim != 1:
+            raise ValueError(f"times must be 1D, got shape {times_np.shape}.")
+        if probs_np.ndim != 1:
+            raise ValueError(f"probabilities must be 1D, got shape {probs_np.shape}.")
+        if times_np.size != probs_np.size:
             raise ValueError(
                 f"times and probabilities must have same length. "
-                f"Got {times.size} and {probabilities.size}."
+                f"Got {times_np.size} and {probs_np.size}."
             )
 
-        if times.size == 0:
+        if times_np.size == 0:
             return []
 
         # Stage 1: Hysteresis thresholding
-        mask = self._hysteresis_threshold(probabilities)
+        mask = self._hysteresis_threshold(probs_np)
 
         # Stage 2: Extract intervals from mask
-        intervals = self._mask_to_intervals(mask, times)
+        intervals = self._mask_to_intervals(mask, times_np)
 
         # Stage 3: Merge short gaps
         intervals = self._merge_gaps(intervals)
 
         # Stage 4: Filter short calls and add padding
-        intervals = self._filter_and_pad(intervals, times)
+        intervals = self._filter_and_pad(intervals, times_np)
 
         return intervals
 

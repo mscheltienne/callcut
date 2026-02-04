@@ -23,9 +23,9 @@ class BaseDetector(ABC, nn.Module):
 
     Subclasses must implement:
 
-    - :meth:`forward`: Process input features and return logits.
-    - :attr:`receptive_field`: Property returning the receptive field in frames.
-    - :meth:`_save_kwargs`: Return additional constructor kwargs for serialization.
+    - ``forward``: Process input features and return logits.
+    - ``receptive_field``: Property returning the receptive field in frames.
+    - ``_save_kwargs``: Return additional constructor kwargs for serialization.
 
     Models accept input of shape ``(batch, n_bands, time)`` and return logits of shape
     ``(batch, time)``.
