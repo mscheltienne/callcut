@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from callcut.inference import Interval
-from callcut.metrics._types import EventMetrics, Match
+from callcut.evaluation._types import EventMetrics, Interval, Match
 
 
 def compute_event_metrics(
@@ -24,7 +23,7 @@ def compute_event_metrics(
         Predicted call intervals.
     matches : list of Match
         Matches between ground truth and predictions, typically from
-        :class:`~callcut.metrics.IoUMatcher`.
+        :class:`~callcut.evaluation.IoUMatcher`.
 
     Returns
     -------
@@ -56,8 +55,7 @@ def compute_event_metrics(
 
     Examples
     --------
-    >>> from callcut.inference import Interval
-    >>> from callcut.metrics import IoUMatcher, compute_event_metrics
+    >>> from callcut.evaluation import Interval, IoUMatcher, compute_event_metrics
     >>>
     >>> gt = [Interval(0.0, 1.0), Interval(2.0, 3.0), Interval(4.0, 5.0)]
     >>> pred = [Interval(0.1, 0.9), Interval(2.1, 3.1)]  # missed one

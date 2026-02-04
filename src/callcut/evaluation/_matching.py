@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from callcut.inference import Interval
-from callcut.metrics._types import Match
+from callcut.evaluation._types import Interval, Match
 from callcut.utils._checks import check_type
 
 
@@ -75,7 +74,7 @@ class IoUMatcher(BaseIntervalMatcher):
 
     Examples
     --------
-    >>> from callcut.inference import Interval
+    >>> from callcut.evaluation import Interval
     >>> gt = [Interval(0.0, 1.0), Interval(2.0, 3.0)]
     >>> pred = [Interval(0.1, 0.9), Interval(2.1, 3.1)]
     >>> matcher = IoUMatcher(iou_threshold=0.2)

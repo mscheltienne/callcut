@@ -1,4 +1,4 @@
-"""Data types for metric results."""
+"""Data types for evaluation results."""
 
 from __future__ import annotations
 
@@ -9,6 +9,45 @@ import numpy as np
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+
+
+@dataclass(frozen=True)
+class Interval:
+    """A time interval representing a detected or annotated call.
+
+    Parameters
+    ----------
+    onset : float
+        Start time in seconds.
+    offset : float
+        End time in seconds.
+
+    Examples
+    --------
+    >>> interval = Interval(onset=1.5, offset=2.3)
+    >>> interval.duration
+    0.8
+    """
+
+    onset: float
+    offset: float
+
+    def __post_init__(self) -> None:
+        if self.offset < self.onset:
+            raise ValueError(
+                f"Interval offset ({self.offset}) must be >= onset ({self.onset})."
+            )
+
+    @property
+    def duration(self) -> float:
+        """Duration of the interval in seconds.
+
+        :type: :class:`float`
+        """
+        return self.offset - self.onset
+
+    def __repr__(self) -> str:
+        return f"Interval(onset={self.onset:.4f}, offset={self.offset:.4f})"
 
 
 @dataclass(frozen=True)

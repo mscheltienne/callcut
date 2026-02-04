@@ -10,9 +10,9 @@ from torch import Tensor
 from torch.utils.data import Dataset
 from torchcodec.decoders import AudioDecoder
 
-from callcut.data._labels import intervals_to_frame_labels
 from callcut.features import BaseExtractor
-from callcut.io import load_annotations, load_audio
+from callcut.io._labels import intervals_to_frame_labels
+from callcut.io._loader import load_annotations, load_audio
 from callcut.utils._checks import check_type, ensure_int, ensure_path
 from callcut.utils.logs import logger, warn
 
@@ -102,7 +102,7 @@ class CallDataset(Dataset):
     --------
     >>> from pathlib import Path
     >>> from callcut.features import SNRExtractor
-    >>> from callcut.data import CallDataset
+    >>> from callcut.io import CallDataset
     >>> from torch.utils.data import DataLoader
     >>>
     >>> extractor = SNRExtractor(sample_rate=32000, hop_ms=8.0, n_bands=8)

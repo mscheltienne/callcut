@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from callcut.inference import Interval
-from callcut.metrics._types import BoundaryAccuracy, Match
+from callcut.evaluation._types import BoundaryAccuracy, Interval, Match
 
 
 def compute_boundary_accuracy(
@@ -25,7 +24,7 @@ def compute_boundary_accuracy(
         Predicted call intervals.
     matches : list of Match
         Matches between ground truth and predictions, typically from
-        :class:`~callcut.metrics.IoUMatcher`.
+        :class:`~callcut.evaluation.IoUMatcher`.
 
     Returns
     -------
@@ -50,8 +49,7 @@ def compute_boundary_accuracy(
 
     Examples
     --------
-    >>> from callcut.inference import Interval
-    >>> from callcut.metrics import IoUMatcher, compute_boundary_accuracy
+    >>> from callcut.evaluation import Interval, IoUMatcher, compute_boundary_accuracy
     >>>
     >>> gt = [Interval(1.0, 2.0), Interval(3.0, 4.0)]
     >>> pred = [Interval(1.02, 1.98), Interval(3.01, 4.05)]  # small errors

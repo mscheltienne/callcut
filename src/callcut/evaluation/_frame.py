@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 from torch import Tensor
 
-from callcut.metrics._types import FrameMetrics
+from callcut.evaluation._types import FrameMetrics
 from callcut.utils._checks import check_type
 
 
@@ -25,7 +25,7 @@ def compute_frame_metrics(
         Typically from :meth:`~callcut.nn.BaseDetector.predict`.
     labels : Tensor
         Ground truth labels of shape ``(n_frames,)``, with values ``0`` (no call)
-        or ``1`` (call). Typically from :func:`~callcut.data.intervals_to_frame_labels`.
+        or ``1`` (call). Typically from :func:`~callcut.io.intervals_to_frame_labels`.
     threshold : float
         Classification threshold. Frames with ``probability >= threshold`` are
         classified as positive (call). Default is ``0.5``.
@@ -44,7 +44,7 @@ def compute_frame_metrics(
     boundaries, or by predicting many short false alarms.
 
     For final evaluation, event-level metrics (from
-    :func:`~callcut.metrics.compute_event_metrics`) are generally more
+    :func:`~callcut.evaluation.compute_event_metrics`) are generally more
     meaningful.
 
     Examples
