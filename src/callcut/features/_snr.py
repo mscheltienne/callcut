@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -281,16 +282,26 @@ class SNRExtractor(BaseExtractor):
         # Compute STFT and power spectrum
         # ──────────────────────────────────────────────────────────────────────
         window = torch.hann_window(win_samples, device=device, dtype=dtype)
-        S = torch.stft(
-            waveform,
-            n_fft=n_fft,
-            hop_length=hop_samples,
-            win_length=win_samples,
-            window=window,
-            center=True,
-            pad_mode="reflect",
-            return_complex=True,
-        )
+
+        # Filter MPS-specific deprecation warning about tensor resizing during STFT.
+        # This is an internal PyTorch MPS issue, not something we can fix.
+        # See: https://github.com/pytorch/pytorch/issues/174003
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="An output with one or more elements was resized",
+                category=UserWarning,
+            )
+            S = torch.stft(
+                waveform,
+                n_fft=n_fft,
+                hop_length=hop_samples,
+                win_length=win_samples,
+                window=window,
+                center=True,
+                pad_mode="reflect",
+                return_complex=True,
+            )
 
         # power spectrum
         P = S.abs().pow(2)
