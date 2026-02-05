@@ -119,8 +119,20 @@ autosectionlabel_prefix_document = True
 numpydoc_class_members_toctree = False
 numpydoc_attributes_as_param_list = False
 numpydoc_show_inherited_class_members = {
+    # nn
     "callcut.nn.BaseDetector": False,
     "callcut.nn.TinySegCNN": False,
+    # training
+    "callcut.training.CallDetectorModule": False,
+    "callcut.training.CallDataModule": False,
+    "callcut.training.BaseLoss": False,
+    "callcut.training.BCEWithLogitsLoss": False,
+    "callcut.training.FocalLoss": False,
+    "callcut.training.DiceLoss": False,
+    "callcut.training.TverskyLoss": False,
+    "callcut.training.LoggingCallback": False,
+    "callcut.training.MetricsHistoryCallback": False,
+    "callcut.training.SaveBestModelCallback": False,
 }
 
 # x-ref

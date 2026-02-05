@@ -21,6 +21,19 @@ Audio and Annotation Loading
     load_audio
     load_annotations
 
+Recording Metadata
+~~~~~~~~~~~~~~~~~~
+
+Scan and validate recordings before building datasets. This pre-validation step
+ensures all recordings have valid annotations and computes metadata (duration,
+annotation count) without loading the full audio.
+
+.. autosummary::
+    :toctree: ../generated/api
+
+    scan_recordings
+    RecordingInfo
+
 Label Generation
 ~~~~~~~~~~~~~~~~
 
