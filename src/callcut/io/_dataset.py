@@ -4,17 +4,20 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import torch
 from torch import Tensor
 from torch.utils.data import Dataset
-from torchcodec.decoders import AudioDecoder
 
-from callcut.features import BaseExtractor
 from callcut.io._labels import intervals_to_frame_labels
 from callcut.io._loader import load_annotations, load_audio
-from callcut.utils._checks import check_type, ensure_int, ensure_path
+from callcut.io._recording import RecordingInfo
+from callcut.utils._checks import check_type, ensure_int
 from callcut.utils.logs import logger, warn
+
+if TYPE_CHECKING:
+    from callcut.features import BaseExtractor
 
 
 @lru_cache(maxsize=400)
@@ -51,32 +54,24 @@ def _load_recording(
 class CallDataset(Dataset):
     """PyTorch Dataset for frame-level call detection.
 
-    Loads audio recordings and their annotations, extracts features, and provides
-    windowed samples for training. Each sample is a fixed-length window of features
-    with corresponding per-frame binary labels.
-
-    The dataset performs **frame-level segmentation**: each frame within a window
-    has its own label (``1 = call``, ``0 = silence``), rather than a single label per
-    window.
+    Provides windowed samples of features with per-frame binary labels for training
+    call detection models.
 
     Parameters
     ----------
-    recordings : list of Path
-        Paths to audio files. Each audio file should have a corresponding
-        annotation CSV file with the same stem and ``_annotations.csv`` suffix.
+    recordings : list of RecordingInfo
+        Recording metadata from :func:`~callcut.io.scan_recordings`.
     extractor : BaseExtractor
-        Feature extractor instance. Must be already configured with the desired
-        parameters (``sample_rate``, ``hop_ms``, ``n_bands``, etc.).
+        Feature extractor instance.
     window_s : float
         Window length in seconds for each sample.
     window_hop_s : float
-        Hop between consecutive windows in seconds. Controls overlap between
-        training samples.
+        Hop between consecutive windows in seconds.
 
     Attributes
     ----------
     n_recordings : int
-        Number of recordings with valid annotations.
+        Number of recordings in the dataset.
     n_windows : int
         Total number of windows (samples) across all recordings.
     window_frames : int
@@ -87,26 +82,17 @@ class CallDataset(Dataset):
     Notes
     -----
     **Lazy loading**: Features are computed on-demand in ``__getitem__`` rather than
-    pre-loaded into memory. This reduces memory usage but increases I/O during
-    training. For faster training with sufficient RAM, consider using a
-    ``DataLoader`` with ``num_workers > 0`` to parallelize loading.
-
-    **Annotation format**: Annotation files must be CSV with columns
-    ``start_seconds`` and ``stop_seconds`` (values in milliseconds, converted
-    to seconds internally).
-
-    **Missing annotations**: Recordings without a corresponding annotation file
-    are silently skipped.
+    pre-loaded into memory. Results are cached via LRU cache.
 
     Examples
     --------
     >>> from pathlib import Path
     >>> from callcut.features import SNRExtractor
-    >>> from callcut.io import CallDataset
+    >>> from callcut.io import CallDataset, scan_recordings
     >>> from torch.utils.data import DataLoader
     >>>
     >>> extractor = SNRExtractor(sample_rate=32000, hop_ms=8.0, n_bands=8)
-    >>> recordings = list(Path("data/").glob("*.wav"))
+    >>> recordings = scan_recordings(list(Path("data/").glob("*.wav")))
     >>> dataset = CallDataset(
     ...     recordings=recordings,
     ...     extractor=extractor,
@@ -118,26 +104,22 @@ class CallDataset(Dataset):
     >>> X, y = dataset[0]
     >>> X.shape  # (n_bands, window_frames)
     torch.Size([8, 250])
-    >>> y.shape  # (window_frames,)
-    torch.Size([250])
-    >>>
-    >>> loader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
-    >>> for X_batch, y_batch in loader:
-    ...     # X_batch: (32, 8, 250), y_batch: (32, 250)
-    ...     pass
     """
 
     def __init__(
         self,
-        recordings: list[Path | str],
+        recordings: list[RecordingInfo],
         extractor: BaseExtractor,
         window_s: float = 2.0,
         window_hop_s: float = 0.5,
     ) -> None:
+        check_type(recordings, (list,), "recordings")
         check_type(extractor, (BaseExtractor,), "extractor")
         check_type(window_s, ("numeric",), "window_s")
         check_type(window_hop_s, ("numeric",), "window_hop_s")
 
+        if len(recordings) == 0:
+            raise ValueError("Argument 'recordings' cannot be empty.")
         if window_s <= 0:
             raise ValueError(f"Argument 'window_s' must be positive, got {window_s}.")
         if window_hop_s <= 0:
@@ -153,90 +135,48 @@ class CallDataset(Dataset):
         self._extractor = extractor
         self._window_s = float(window_s)
         self._window_hop_s = float(window_hop_s)
-
-        # Convert to frames
         self._window_frames = extractor.seconds_to_frames(window_s)
         self._window_hop_frames = extractor.seconds_to_frames(window_hop_s)
 
-        logger.info(
-            "Creating CallDataset: window_s=%.2f (=%d frames), "
-            "window_hop_s=%.2f (=%d frames)",
-            window_s,
-            self._window_frames,
-            window_hop_s,
-            self._window_hop_frames,
-        )
-
-        # Storage for recording paths (lazy loading)
-        self._recordings: list[tuple[Path, Path]] = []  # (audio_path, annotation_path)
+        # Store recordings and build window index
+        self._recordings: list[RecordingInfo] = []
         self._index: list[tuple[int, int]] = []  # (recording_idx, start_frame)
 
-        # Scan recordings and build index
         for recording in recordings:
-            recording = ensure_path(recording, must_exist=True)
-            annotation_path = recording.with_name(recording.stem + "_annotations.csv")
+            check_type(recording, (RecordingInfo,), "recording")
+            n_windows = recording.estimate_windows(extractor, window_s, window_hop_s)
 
-            if not annotation_path.exists():
-                logger.debug("Skipping %s: no annotation file found", recording.name)
+            if n_windows == 0:
+                logger.debug(
+                    "Skipping %s: too short for window size",
+                    recording.audio_path.name,
+                )
                 continue
 
-            self._index_recording(recording, annotation_path)
+            # Compute window start positions
+            n_frames = recording.estimate_frames(extractor)
+            starts = list(
+                range(0, n_frames - self._window_frames + 1, self._window_hop_frames)
+            )
+            if len(starts) == 0:
+                starts = [0]
+
+            recording_idx = len(self._recordings)
+            self._recordings.append(recording)
+
+            for start in starts:
+                self._index.append((recording_idx, start))
 
         if len(self._index) == 0:
             raise RuntimeError(
-                "No training windows were generated. Check that recordings have "
-                "matching annotation files and are long enough for the window size."
+                "No training windows were generated. "
+                "Check that recordings are long enough for the window size."
             )
 
         logger.info(
             "CallDataset ready: %d recordings, %d windows",
             len(self._recordings),
             len(self._index),
-        )
-
-    def _index_recording(self, audio_path: Path, annotation_path: Path) -> None:
-        """Index a recording without loading features into memory."""
-        # Get audio duration using torchcodec (lightweight, no full decode)
-        try:
-            decoder = AudioDecoder(str(audio_path))
-            duration_s = decoder.metadata.duration_seconds
-        except Exception as exc:
-            logger.error("Failed to read info for %s: %s", audio_path.name, exc)
-            return
-
-        # Estimate number of feature frames
-        n_frames = self._extractor.seconds_to_frames(duration_s)
-
-        # Check if recording is long enough
-        if n_frames < self._window_frames:
-            warn(
-                f"Recording {audio_path.name} has ~{n_frames} frames "
-                f"(need {self._window_frames} for window). Skipping.",
-                ignore_namespaces=("callcut",),
-            )
-            return
-
-        # Compute window start positions
-        starts = list(
-            range(0, n_frames - self._window_frames + 1, self._window_hop_frames)
-        )
-
-        if len(starts) == 0:
-            starts = [0]
-
-        # Store recording path and index windows
-        recording_idx = len(self._recordings)
-        self._recordings.append((audio_path, annotation_path))
-
-        for start in starts:
-            self._index.append((recording_idx, start))
-
-        logger.debug(
-            "Indexed %s: ~%.1fs (~%d frames), %d windows",
-            audio_path.name,
-            duration_s,
-            n_frames,
-            len(starts),
         )
 
     def __len__(self) -> int:
@@ -265,28 +205,26 @@ class CallDataset(Dataset):
             )
 
         recording_idx, start = self._index[idx]
-        audio_path, annotation_path = self._recordings[recording_idx]
+        recording = self._recordings[recording_idx]
 
         # Load features and labels (cached)
-        features, labels = _load_recording(audio_path, annotation_path, self._extractor)
+        features, labels = _load_recording(
+            recording.audio_path, recording.annotation_path, self._extractor
+        )
 
         # Handle edge case: actual frames may differ slightly from estimate
         n_frames = features.shape[1]
         end = start + self._window_frames
 
         if end > n_frames:
-            # Adjust start to fit window at end of recording
             start = max(0, n_frames - self._window_frames)
             end = start + self._window_frames
 
-        X = features[:, start:end]
-        y = labels[start:end]
-
-        return X, y
+        return features[:, start:end], labels[start:end]
 
     @property
     def n_recordings(self) -> int:
-        """Number of recordings with valid annotations.
+        """Number of recordings in the dataset.
 
         :type: :class:`int`
         """
@@ -340,6 +278,14 @@ class CallDataset(Dataset):
         """
         return self._extractor
 
+    @property
+    def recordings(self) -> list[RecordingInfo]:
+        """Recordings in this dataset.
+
+        :type: list of :class:`~callcut.io.RecordingInfo`
+        """
+        return list(self._recordings)
+
     def compute_pos_weight(self) -> Tensor:
         """Compute positive class weight for imbalanced data.
 
@@ -354,20 +300,16 @@ class CallDataset(Dataset):
         -----
         This method loads all recordings to compute exact label statistics.
         For large datasets, this may take some time.
-
-        Examples
-        --------
-        >>> dataset = CallDataset(...)
-        >>> pos_weight = dataset.compute_pos_weight()
-        >>> loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
         """
         logger.info("Computing pos_weight (loading all recordings)...")
 
         total_positive = 0.0
         total_frames = 0.0
 
-        for audio_path, annotation_path in self._recordings:
-            _, labels = _load_recording(audio_path, annotation_path, self._extractor)
+        for recording in self._recordings:
+            _, labels = _load_recording(
+                recording.audio_path, recording.annotation_path, self._extractor
+            )
             total_positive += labels.sum().item()
             total_frames += labels.numel()
 
