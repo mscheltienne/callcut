@@ -5,3 +5,11 @@
 [![doc](https://github.com/mscheltienne/callcut/actions/workflows/doc.yaml/badge.svg?branch=main)](https://github.com/mscheltienne/callcut/actions/workflows/doc.yaml)
 
 # CallCut
+
+## Installation
+
+On Windows, install `ffmpeg`:
+
+1. Download the `"full-shared"` build from https://www.gyan.dev/ffmpeg/builds/
+2. Extract somewhere (e.g., `C:\ffmpeg`)
+3. Add the `bin\` folder to your system PATH
