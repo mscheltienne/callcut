@@ -177,5 +177,5 @@ class SaveBestModelCallback(Callback):
                 warn(
                     "Cannot save model: pl_module is not a CallDetectorModule.",
                     module="callcut",
-                    ignore_namespace=("callcut,"),
+                    ignore_namespaces=("callcut",),
                 )

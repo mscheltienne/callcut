@@ -4,20 +4,17 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import torch
 from torch import Tensor
 from torch.utils.data import Dataset
 
+from callcut.features import BaseExtractor
 from callcut.io._labels import intervals_to_frame_labels
 from callcut.io._loader import load_annotations, load_audio
 from callcut.io._recording import RecordingInfo
 from callcut.utils._checks import check_type, ensure_int
 from callcut.utils.logs import logger, warn
-
-if TYPE_CHECKING:
-    from callcut.features import BaseExtractor
 
 
 @lru_cache(maxsize=400)

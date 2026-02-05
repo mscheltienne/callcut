@@ -12,6 +12,8 @@ from callcut.features import BaseExtractor, SNRExtractor
 from callcut.io import RecordingInfo
 from callcut.training._datamodule import CallDataModule, _split_by_windows
 
+pytestmark = pytest.mark.filterwarnings("ignore:.*pin_memory.*:UserWarning")
+
 
 class _DummyExtractor(BaseExtractor):
     """Minimal extractor for testing."""
@@ -348,11 +350,17 @@ class TestCallDataModule:
                 num_workers=-1,
             )
 
-    def test_no_valid_recordings(self, extractor: SNRExtractor) -> None:
+    def test_no_valid_recordings(
+        self, tmp_path: Path, extractor: SNRExtractor
+    ) -> None:
         """Test error when no valid recordings found."""
+        # Create a file that exists but has no annotations
+        fake_wav = tmp_path / "no_annotations.wav"
+        fake_wav.write_bytes(b"RIFF\x00\x00\x00\x00WAVEfmt ")
+
         with pytest.raises(ValueError, match="No valid recordings"):
             CallDataModule(
-                recordings=[Path("/nonexistent/file.wav")],
+                recordings=[fake_wav],
                 extractor=extractor,
                 batch_size=2,
                 num_workers=0,
@@ -382,6 +390,8 @@ class TestCallDataModule:
             extractor=extractor,
             batch_size=2,
             num_workers=0,
+            train_frac=0.5,
+            val_frac=0.2,
             test_frac=0.3,  # Ensure there are test recordings
         )
         dm.setup("test")
@@ -435,6 +445,7 @@ class TestCallDataModule:
         if loader is not None:
             assert isinstance(loader, DataLoader)
 
+    @pytest.mark.filterwarnings("ignore:No test recordings available:RuntimeWarning")
     def test_test_dataloader(
         self, all_audio_files: list[Path], extractor: SNRExtractor
     ) -> None:

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 import torch
+from numpy.testing import assert_allclose
 
 from callcut.nn import TinySegCNN, load_model
 from callcut.training import (
@@ -50,14 +52,15 @@ class TestLoggingCallback:
         )
         module = _create_mock_module()
 
-        with caplog.at_level("INFO"):
+        with caplog.at_level(logging.INFO, logger="callcut"):
             callback.on_train_epoch_end(trainer, module)
 
         # Check that epoch info was logged
-        assert any("Epoch 006" in record.message for record in caplog.records)
-        assert any("train_loss=0.5000" in record.message for record in caplog.records)
-        assert any("val_loss=0.4000" in record.message for record in caplog.records)
-        assert any("val_f1=0.850" in record.message for record in caplog.records)
+        log_text = caplog.text
+        assert "Epoch 006" in log_text
+        assert "train_loss=0.5000" in log_text
+        assert "val_loss=0.4000" in log_text
+        assert "val_f1=0.850" in log_text
 
     def test_on_train_epoch_end_partial_metrics(
         self, caplog: pytest.LogCaptureFixture
@@ -67,12 +70,13 @@ class TestLoggingCallback:
         trainer = _create_mock_trainer({"train_loss": 0.5}, epoch=0)
         module = _create_mock_module()
 
-        with caplog.at_level("INFO"):
+        with caplog.at_level(logging.INFO, logger="callcut"):
             callback.on_train_epoch_end(trainer, module)
 
         # Should still log without errors
-        assert any("Epoch 001" in record.message for record in caplog.records)
-        assert any("train_loss=0.5000" in record.message for record in caplog.records)
+        log_text = caplog.text
+        assert "Epoch 001" in log_text
+        assert "train_loss=0.5000" in log_text
 
     def test_on_train_epoch_end_no_metrics(
         self, caplog: pytest.LogCaptureFixture
@@ -82,11 +86,11 @@ class TestLoggingCallback:
         trainer = _create_mock_trainer({}, epoch=0)
         module = _create_mock_module()
 
-        with caplog.at_level("INFO"):
+        with caplog.at_level(logging.INFO, logger="callcut"):
             callback.on_train_epoch_end(trainer, module)
 
         # Should still log epoch number
-        assert any("Epoch 001" in record.message for record in caplog.records)
+        assert "Epoch 001" in caplog.text
 
 
 class TestMetricsHistoryCallback:
@@ -119,7 +123,7 @@ class TestMetricsHistoryCallback:
         assert "val_f1" in callback.history
         assert len(callback.history["train_loss"]) == 3
         assert len(callback.history["val_f1"]) == 3
-        assert callback.history["train_loss"] == [0.8, 0.6, 0.4]
+        assert_allclose(callback.history["train_loss"], [0.8, 0.6, 0.4])
 
     def test_converts_tensors_to_float(self) -> None:
         """Test that tensor values are converted to float."""
@@ -144,8 +148,8 @@ class TestMetricsHistoryCallback:
         trainer2 = _create_mock_trainer({"train_loss": 0.4, "val_f1": 0.8}, epoch=1)
         callback.on_train_epoch_end(trainer2, module)
 
-        assert callback.history["train_loss"] == [0.5, 0.4]
-        assert callback.history["val_f1"] == [0.8]  # Only from second epoch
+        assert_allclose(callback.history["train_loss"], [0.5, 0.4])
+        assert_allclose(callback.history["val_f1"], [0.8])
 
 
 class TestSaveBestModelCallback:
@@ -169,7 +173,7 @@ class TestSaveBestModelCallback:
 
     def test_invalid_mode(self, tmp_path: Path) -> None:
         """Test that invalid mode raises error."""
-        with pytest.raises(ValueError, match="must be one of"):
+        with pytest.raises(ValueError, match="Allowed values are"):
             SaveBestModelCallback(tmp_path / "model.pt", mode="invalid")
 
     def test_invalid_monitor_type(self, tmp_path: Path) -> None:
@@ -261,9 +265,7 @@ class TestSaveBestModelCallback:
 
         assert not save_path.exists()
 
-    def test_warns_for_non_calldetector_module(
-        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_warns_for_non_calldetector_module(self, tmp_path: Path) -> None:
         """Test that warning is issued for non-CallDetectorModule."""
         save_path = tmp_path / "best.pt"
         callback = SaveBestModelCallback(save_path, monitor="val_f1", mode="max")
@@ -275,7 +277,8 @@ class TestSaveBestModelCallback:
         trainer = _create_mock_trainer({"val_f1": 0.8}, epoch=0)
 
         # This should issue a warning but not crash
-        callback.on_validation_epoch_end(trainer, mock_module)
+        with pytest.warns(RuntimeWarning, match="not a CallDetectorModule"):
+            callback.on_validation_epoch_end(trainer, mock_module)
 
         # Model should not be saved (it's not a CallDetectorModule)
         assert not save_path.exists()

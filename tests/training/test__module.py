@@ -15,6 +15,10 @@ from callcut.training import (
     TverskyLoss,
 )
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:You are trying to `self.log\\(\\):UserWarning"
+)
+
 
 class TestCallDetectorModuleInit:
     """Tests for CallDetectorModule initialization."""
@@ -130,18 +134,17 @@ class TestCallDetectorModuleForward:
         assert output.shape == (4, 100)
 
     def test_forward_returns_logits(self) -> None:
-        """Test that forward returns logits (not probabilities)."""
+        """Test that forward returns logits (same as underlying model)."""
         model = TinySegCNN(n_bands=8, window_frames=100)
         loss = BCEWithLogitsLoss()
         module = CallDetectorModule(model, loss=loss, lr=1e-3)
 
         x = torch.randn(4, 8, 100)
-        output = module(x)
+        module_output = module(x)
+        model_output = model(x)
 
-        # Logits can be any real value (negative or positive)
-        # If output was after sigmoid, all values would be in [0, 1]
-        # With random weights, we expect some values outside [0, 1]
-        assert output.min() < 0 or output.max() > 1
+        # Module forward should return raw logits, same as model
+        torch.testing.assert_close(module_output, model_output)
 
 
 class TestCallDetectorModuleTrainingStep:

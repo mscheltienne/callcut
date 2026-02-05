@@ -305,7 +305,7 @@ class CallDataModule(LightningDataModule):
                 warn(
                     "No test recordings available.",
                     module="callcut",
-                    ignore_namespace=("callcut",),
+                    ignore_namespaces=("callcut",),
                 )
 
     def train_dataloader(self) -> DataLoader:
