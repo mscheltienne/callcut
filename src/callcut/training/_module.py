@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 
 import lightning as L
 import torch
-import torch.nn as nn
 
 from callcut.evaluation import compute_frame_metrics
 from callcut.nn import BaseDetector
+from callcut.training._losses import BaseLoss
 from callcut.utils._checks import check_type
 from callcut.utils.logs import logger
 
@@ -27,62 +27,57 @@ class CallDetectorModule(L.LightningModule):
     ----------
     model : BaseDetector
         The detector model to train.
+    loss : BaseLoss
+        Loss function to use. Available loss functions:
+
+        - :class:`~callcut.training.BCEWithLogitsLoss`: Standard binary cross-entropy
+        - :class:`~callcut.training.FocalLoss`: Down-weights easy examples
+        - :class:`~callcut.training.DiceLoss`: Optimizes overlap directly
+        - :class:`~callcut.training.TverskyLoss`: Adjustable FP/FN penalties
     lr : float
         Learning rate for the optimizer.
-    pos_weight : float | None
-        Positive class weight for imbalanced data. If ``None``, no weighting is
-        applied. Can be computed using
-        :meth:`~callcut.io.CallDataset.compute_pos_weight`.
 
     Examples
     --------
     >>> from callcut.nn import TinySegCNN
-    >>> from callcut.training import CallDetectorModule, CallDataModule
+    >>> from callcut.training import (
+    ...     CallDetectorModule,
+    ...     CallDataModule,
+    ...     BCEWithLogitsLoss,
+    ... )
     >>> import lightning as L
     >>>
     >>> # Create model and module
     >>> model = TinySegCNN(n_bands=8, window_frames=250)
-    >>> module = CallDetectorModule(model, lr=1e-3)
+    >>> module = CallDetectorModule(model, loss=BCEWithLogitsLoss(), lr=1e-3)
     >>>
-    >>> # Create data module
+    >>> # Or with a different loss function
+    >>> from callcut.training import FocalLoss
+    >>> module = CallDetectorModule(model, loss=FocalLoss(gamma=2.0), lr=1e-3)
+    >>>
+    >>> # Create data module and train
     >>> dm = CallDataModule(recordings=..., extractor=...)
-    >>>
-    >>> # Train
     >>> trainer = L.Trainer(max_epochs=10)
     >>> trainer.fit(module, datamodule=dm)
     """
 
-    def __init__(
-        self,
-        model: BaseDetector,
-        lr: float = 1e-3,
-        pos_weight: float | None = None,
-    ) -> None:
+    def __init__(self, model: BaseDetector, loss: BaseLoss, lr: float = 1e-3) -> None:
         super().__init__()
         check_type(model, (BaseDetector,), "model")
+        check_type(loss, (BaseLoss,), "loss")
         check_type(lr, ("numeric",), "lr")
-        check_type(pos_weight, ("numeric", None), "pos_weight")
 
         if lr <= 0:
             raise ValueError(f"Argument 'lr' must be positive, got {lr}.")
-        if pos_weight is not None and pos_weight <= 0:
-            raise ValueError(
-                f"Argument 'pos_weight' must be positive, got {pos_weight}."
-            )
 
         self._model = model
         self._lr = float(lr)
-        self._pos_weight = float(pos_weight) if pos_weight is not None else None
+        self._loss_fn = loss
 
-        # Loss function (set up in setup() or on first forward if pos_weight is None)
-        self._loss_fn: nn.BCEWithLogitsLoss | None = None
+        # Save hyperparameters for checkpointing (excludes model and loss)
+        self.save_hyperparameters(ignore=["model", "loss"])
 
-        # Save hyperparameters for checkpointing (excludes model)
-        self.save_hyperparameters(ignore=["model"])
-
-        logger.info(
-            "CallDetectorModule initialized: lr=%.2e, pos_weight=%s", lr, pos_weight
-        )
+        logger.info("CallDetectorModule initialized: lr=%.2e, loss=%s", lr, loss)
 
     @property
     def model(self) -> BaseDetector:
@@ -92,28 +87,13 @@ class CallDetectorModule(L.LightningModule):
         """
         return self._model
 
-    def setup(self, stage: str) -> None:
-        """Set up the module for a given stage.
+    @property
+    def loss(self) -> BaseLoss:
+        """The loss function.
 
-        Parameters
-        ----------
-        stage : str
-            One of ``"fit"``, ``"validate"``, ``"test"``, or ``"predict"``.
+        :type: :class:`~callcut.training.BaseLoss`
         """
-        if stage == "fit" and self._loss_fn is None:
-            self._setup_loss_fn()
-
-    def _setup_loss_fn(self) -> None:
-        """Initialize the loss function with optional pos_weight."""
-        if self._pos_weight is not None:
-            pos_weight = torch.tensor([self._pos_weight], dtype=torch.float32)
-            self._loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-            logger.debug(
-                "Loss function initialized with pos_weight=%.2f", self._pos_weight
-            )
-        else:
-            self._loss_fn = nn.BCEWithLogitsLoss()
-            logger.debug("Loss function initialized without pos_weight")
+        return self._loss_fn
 
     def forward(self, x: Tensor) -> Tensor:
         """Forward pass through the model.
@@ -147,11 +127,6 @@ class CallDetectorModule(L.LightningModule):
         """
         X, y = batch
         logits = self(X)
-
-        if self._loss_fn is None:
-            self._setup_loss_fn()
-        assert self._loss_fn is not None  # sanity-check
-
         loss = self._loss_fn(logits, y)
         self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         return loss
@@ -168,11 +143,6 @@ class CallDetectorModule(L.LightningModule):
         """
         X, y = batch
         logits = self(X)
-
-        if self._loss_fn is None:
-            self._setup_loss_fn()
-        assert self._loss_fn is not None  # sanity-check
-
         loss = self._loss_fn(logits, y)
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
@@ -200,11 +170,6 @@ class CallDetectorModule(L.LightningModule):
         """
         X, y = batch
         logits = self(X)
-
-        if self._loss_fn is None:
-            self._setup_loss_fn()
-        assert self._loss_fn is not None  # sanity-check
-
         loss = self._loss_fn(logits, y)
         self.log("test_loss", loss, on_step=False, on_epoch=True)
 
@@ -233,5 +198,5 @@ class CallDetectorModule(L.LightningModule):
             f"{self.__class__.__name__}("
             f"model={self._model.__class__.__name__}, "
             f"lr={self._lr}, "
-            f"pos_weight={self._pos_weight})"
+            f"loss={self._loss_fn})"
         )

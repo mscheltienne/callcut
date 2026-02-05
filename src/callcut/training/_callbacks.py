@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from lightning import Callback
 
 from callcut.nn import save_model
-from callcut.training import CallDetectorModule
+from callcut.training._module import CallDetectorModule
 from callcut.utils._checks import check_type, check_value, ensure_path
 from callcut.utils.logs import logger, warn
 
