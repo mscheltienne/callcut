@@ -13,6 +13,9 @@ from callcut.io import load_annotations, load_audio
 _SAMPLES = [
     "or60yw70_280912_1616.1941",
     "gy6or6_baseline_250312_1456.1276",
+    "or60yw70_300912_0725.437",
+    "gy6or6_baseline_250312_1118.6",
+    "gy6or6_baseline_250312_0823.5883",
 ]
 
 
