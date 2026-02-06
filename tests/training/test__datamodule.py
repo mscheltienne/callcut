@@ -8,7 +8,7 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from callcut.features import BaseExtractor, SNRExtractor
+from callcut.extractors import BaseExtractor, SNRExtractor
 from callcut.io import RecordingInfo
 from callcut.training._datamodule import CallDataModule, _split_by_windows
 
@@ -43,6 +43,13 @@ class _DummyExtractor(BaseExtractor):
         features = torch.randn(self._n_features, n_frames)
         times = torch.arange(n_frames) * (self._hop_ms / 1000.0)
         return features, times
+
+    def _save_config(self) -> dict:
+        return {
+            "sample_rate": self._sample_rate,
+            "hop_ms": self._hop_ms,
+            "n_features": self._n_features,
+        }
 
 
 @pytest.fixture(scope="module")
@@ -381,23 +388,18 @@ class TestCallDataModule:
         assert dm.train_dataset is not None
         assert len(dm.train_dataset) > 0
 
-    def test_setup_test(
+    def test_setup_test_raises(
         self, all_audio_files: list[Path], extractor: SNRExtractor
     ) -> None:
-        """Test setup for test stage."""
+        """Test that setup('test') raises ValueError."""
         dm = CallDataModule(
             recordings=all_audio_files,
             extractor=extractor,
             batch_size=2,
             num_workers=0,
-            train_frac=0.5,
-            val_frac=0.2,
-            test_frac=0.3,  # Ensure there are test recordings
         )
-        dm.setup("test")
-
-        # May or may not have test recordings depending on split
-        # Just verify it doesn't error
+        with pytest.raises(ValueError, match="Only stage='fit' is supported"):
+            dm.setup("test")
 
     def test_train_dataloader(
         self, all_audio_files: list[Path], extractor: SNRExtractor
@@ -445,24 +447,6 @@ class TestCallDataModule:
         if loader is not None:
             assert isinstance(loader, DataLoader)
 
-    @pytest.mark.filterwarnings("ignore:No test recordings available:RuntimeWarning")
-    def test_test_dataloader(
-        self, all_audio_files: list[Path], extractor: SNRExtractor
-    ) -> None:
-        """Test test_dataloader method."""
-        dm = CallDataModule(
-            recordings=all_audio_files,
-            extractor=extractor,
-            batch_size=2,
-            num_workers=0,
-        )
-        dm.setup("test")
-        loader = dm.test_dataloader()
-
-        # May be None if no test recordings
-        if loader is not None:
-            assert isinstance(loader, DataLoader)
-
     def test_datasets_properties(
         self, all_audio_files: list[Path], extractor: SNRExtractor
     ) -> None:
@@ -477,7 +461,6 @@ class TestCallDataModule:
         # Before setup
         assert dm.train_dataset is None
         assert dm.val_dataset is None
-        assert dm.test_dataset is None
 
         # After setup
         dm.setup("fit")

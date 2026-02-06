@@ -9,7 +9,7 @@ import torch
 from torch import Tensor
 from torch.utils.data import Dataset
 
-from callcut.features import BaseExtractor
+from callcut.extractors import BaseExtractor
 from callcut.io._labels import intervals_to_frame_labels
 from callcut.io._loader import load_annotations, load_audio
 from callcut.io._recording import RecordingInfo
@@ -84,7 +84,7 @@ class CallDataset(Dataset):
     Examples
     --------
     >>> from pathlib import Path
-    >>> from callcut.features import SNRExtractor
+    >>> from callcut.extractors import SNRExtractor
     >>> from callcut.io import CallDataset, scan_recordings
     >>> from torch.utils.data import DataLoader
     >>>
@@ -271,7 +271,7 @@ class CallDataset(Dataset):
     def extractor(self) -> BaseExtractor:
         """Feature extractor used by this dataset.
 
-        :type: :class:`~callcut.features.BaseExtractor`
+        :type: :class:`~callcut.extractors.BaseExtractor`
         """
         return self._extractor
 

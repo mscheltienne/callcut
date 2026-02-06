@@ -28,7 +28,7 @@ class BaseExtractor(ABC):
 
     Examples
     --------
-    Create a custom extractor by subclassing :class:`~callcut.features.BaseExtractor`:
+    Create a custom extractor by subclassing :class:`~callcut.extractors.BaseExtractor`:
 
     >>> class MyExtractor(BaseExtractor):
     ...     def __init__(self, sample_rate: int, hop_ms: float = 10.0):
@@ -99,6 +99,20 @@ class BaseExtractor(ABC):
         :type: :class:`float`
         """
         return 1000.0 / self.hop_ms
+
+    @abstractmethod
+    def _save_config(self) -> dict:
+        """Return constructor kwargs for serialization.
+
+        Subclasses must implement this to enable saving and loading of pipeline
+        configurations. The returned dictionary should contain all constructor
+        arguments needed to recreate the extractor.
+
+        Returns
+        -------
+        config : dict
+            Dictionary of constructor keyword arguments.
+        """
 
     @abstractmethod
     def __hash__(self) -> int:

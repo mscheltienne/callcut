@@ -14,7 +14,7 @@ from callcut.utils.logs import logger
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from callcut.features import BaseExtractor
+    from callcut.extractors import BaseExtractor
 
 
 @dataclass(frozen=True)

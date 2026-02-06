@@ -8,8 +8,9 @@ This is the reference for classes (``CamelCase`` names) and functions
     :maxdepth: 2
 
     io.rst
-    features.rst
+    extractors.rst
     nn.rst
     training.rst
     evaluation.rst
+    pipeline.rst
     logging.rst

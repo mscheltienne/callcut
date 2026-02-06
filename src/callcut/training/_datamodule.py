@@ -10,12 +10,12 @@ from torch.utils.data import DataLoader
 
 from callcut.io import CallDataset, RecordingInfo, scan_recordings
 from callcut.utils._checks import check_type, ensure_int
-from callcut.utils.logs import logger, warn
+from callcut.utils.logs import logger
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from callcut.features import BaseExtractor
+    from callcut.extractors import BaseExtractor
 
 
 def _split_by_windows(
@@ -121,7 +121,9 @@ class CallDataModule(LightningDataModule):
     """Lightning DataModule for call detection.
 
     Handles data loading, train/val/test splitting (balanced by window count),
-    and DataLoader creation.
+    and DataLoader creation for training and validation. The test split is
+    exposed via :attr:`test_recordings` for use with
+    :func:`~callcut.pipeline.evaluate_recordings`.
 
     Parameters
     ----------
@@ -149,15 +151,21 @@ class CallDataModule(LightningDataModule):
 
     Notes
     -----
-    The splitting is done by **window count**, not by file count. This ensures
-    that each split contains approximately the target fraction of training
-    samples, even when recordings have different durations.
+    The splitting is done at the **recording level**, balanced by **window
+    count** rather than file count. This ensures each split contains
+    approximately the target fraction of training samples, even when
+    recordings have different durations.
+
+    Only the ``"fit"`` stage is supported for :meth:`setup`. For evaluation on
+    the held-out test split, use :func:`~callcut.pipeline.evaluate_recordings`
+    with :attr:`test_recordings`.
 
     Examples
     --------
     >>> from pathlib import Path
-    >>> from callcut.features import SNRExtractor
+    >>> from callcut.extractors import SNRExtractor
     >>> from callcut.training import CallDataModule
+    >>> from callcut.pipeline import evaluate_recordings
     >>> import lightning as L
     >>>
     >>> extractor = SNRExtractor(sample_rate=32000, hop_ms=8.0, n_bands=8)
@@ -169,6 +177,11 @@ class CallDataModule(LightningDataModule):
     ... )
     >>> trainer = L.Trainer(max_epochs=10)
     >>> trainer.fit(model, datamodule=dm)
+    >>>
+    >>> # Evaluate on held-out test recordings
+    >>> report = evaluate_recordings(
+    ...     model, extractor, dm.test_recordings, decoder, matcher
+    ... )
     """
 
     def __init__(
@@ -242,7 +255,6 @@ class CallDataModule(LightningDataModule):
         self._test_recordings: list[RecordingInfo] = []
         self._train_dataset: CallDataset | None = None
         self._val_dataset: CallDataset | None = None
-        self._test_dataset: CallDataset | None = None
 
         logger.info(
             "CallDataModule initialized: %d recordings, batch_size=%d",
@@ -251,13 +263,21 @@ class CallDataModule(LightningDataModule):
         )
 
     def setup(self, stage: str) -> None:
-        """Set up datasets for train/val/test stages.
+        """Set up datasets for the fit stage.
 
         Parameters
         ----------
         stage : str
-            One of ``"fit"``, ``"validate"``, ``"test"``, or ``"predict"``.
+            Must be ``"fit"``. Other stages are not supported; use
+            :func:`~callcut.pipeline.evaluate_recordings` for evaluation on
+            held-out test recordings (available via :attr:`test_recordings`).
         """
+        if stage != "fit":
+            raise ValueError(
+                f"Only stage='fit' is supported, got {stage!r}. "
+                "Use evaluate_recordings() with test_recordings for evaluation."
+            )
+
         # Split recordings if not already done
         if len(self._train_recordings) == 0:
             self._train_recordings, self._val_recordings, self._test_recordings = (
@@ -272,41 +292,24 @@ class CallDataModule(LightningDataModule):
                 )
             )
 
-        if stage == "fit":
-            self._train_dataset = CallDataset(
-                recordings=self._train_recordings,
+        self._train_dataset = CallDataset(
+            recordings=self._train_recordings,
+            extractor=self._extractor,
+            window_s=self._window_s,
+            window_hop_s=self._window_hop_s,
+        )
+        if len(self._val_recordings) > 0:
+            self._val_dataset = CallDataset(
+                recordings=self._val_recordings,
                 extractor=self._extractor,
                 window_s=self._window_s,
                 window_hop_s=self._window_hop_s,
             )
-            if len(self._val_recordings) > 0:
-                self._val_dataset = CallDataset(
-                    recordings=self._val_recordings,
-                    extractor=self._extractor,
-                    window_s=self._window_s,
-                    window_hop_s=self._window_hop_s,
-                )
-            logger.info(
-                "Setup fit: train=%d windows, val=%d windows",
-                len(self._train_dataset) if self._train_dataset else 0,
-                len(self._val_dataset) if self._val_dataset else 0,
-            )
-
-        if stage == "test":
-            if len(self._test_recordings) > 0:
-                self._test_dataset = CallDataset(
-                    recordings=self._test_recordings,
-                    extractor=self._extractor,
-                    window_s=self._window_s,
-                    window_hop_s=self._window_hop_s,
-                )
-                logger.info("Setup test: %d windows", len(self._test_dataset))
-            else:
-                warn(
-                    "No test recordings available.",
-                    module="callcut",
-                    ignore_namespaces=("callcut",),
-                )
+        logger.info(
+            "Setup fit: train=%d windows, val=%d windows",
+            len(self._train_dataset) if self._train_dataset else 0,
+            len(self._val_dataset) if self._val_dataset else 0,
+        )
 
     def train_dataloader(self) -> DataLoader:
         """Return the training DataLoader."""
@@ -335,18 +338,6 @@ class CallDataModule(LightningDataModule):
             pin_memory=True,
         )
 
-    def test_dataloader(self) -> DataLoader | None:
-        """Return the test DataLoader."""
-        if self._test_dataset is None:
-            return None
-        return DataLoader(
-            self._test_dataset,
-            batch_size=self._batch_size,
-            shuffle=False,
-            num_workers=self._num_workers,
-            pin_memory=True,
-        )
-
     @property
     def train_dataset(self) -> CallDataset | None:
         """Training dataset (available after setup).
@@ -364,12 +355,28 @@ class CallDataModule(LightningDataModule):
         return self._val_dataset
 
     @property
-    def test_dataset(self) -> CallDataset | None:
-        """Test dataset (available after setup).
+    def train_recordings(self) -> list[RecordingInfo]:
+        """Training recordings (available after setup or split).
 
-        :type: :class:`~callcut.io.CallDataset` | None
+        :type: :class:`list` of :class:`~callcut.io.RecordingInfo`
         """
-        return self._test_dataset
+        return self._train_recordings
+
+    @property
+    def val_recordings(self) -> list[RecordingInfo]:
+        """Validation recordings (available after setup or split).
+
+        :type: :class:`list` of :class:`~callcut.io.RecordingInfo`
+        """
+        return self._val_recordings
+
+    @property
+    def test_recordings(self) -> list[RecordingInfo]:
+        """Test recordings (available after setup or split).
+
+        :type: :class:`list` of :class:`~callcut.io.RecordingInfo`
+        """
+        return self._test_recordings
 
     @property
     def n_recordings(self) -> int:
@@ -383,7 +390,7 @@ class CallDataModule(LightningDataModule):
     def extractor(self) -> BaseExtractor:
         """Feature extractor used by this data module.
 
-        :type: :class:`~callcut.features.BaseExtractor`
+        :type: :class:`~callcut.extractors.BaseExtractor`
         """
         return self._extractor
 

@@ -5,10 +5,15 @@ from __future__ import annotations
 import numpy as np
 
 from callcut.evaluation._types import BoundaryAccuracy, Interval, Match
+from callcut.utils._checks import check_type
 
 
 def compute_boundary_accuracy(
-    ground_truth: list[Interval], predictions: list[Interval], matches: list[Match]
+    ground_truth: list[Interval],
+    predictions: list[Interval],
+    matches: list[Match],
+    *,
+    boundary_tolerance_ms: float | None = None,
 ) -> BoundaryAccuracy:
     """Compute onset/offset timing errors for matched events.
 
@@ -25,6 +30,11 @@ def compute_boundary_accuracy(
     matches : list of Match
         Matches between ground truth and predictions, typically from
         :class:`~callcut.evaluation.IoUMatcher`.
+    boundary_tolerance_ms : float | None
+        If set, discard matched events where either the onset or offset error
+        exceeds this tolerance (in milliseconds). Only matches within tolerance
+        contribute to the summary statistics. If ``None`` (default), all matches
+        are included.
 
     Returns
     -------
@@ -61,6 +71,14 @@ def compute_boundary_accuracy(
     >>> accuracy.onset_mean_abs_ms  # average onset error ~15ms
     15.0
     """
+    if boundary_tolerance_ms is not None:
+        check_type(boundary_tolerance_ms, ("numeric",), "boundary_tolerance_ms")
+        if boundary_tolerance_ms < 0:
+            raise ValueError(
+                "Argument 'boundary_tolerance_ms' must be >= 0, "
+                f"got {boundary_tolerance_ms}."
+            )
+
     n_matches = len(matches)
 
     if n_matches == 0:
@@ -84,8 +102,19 @@ def compute_boundary_accuracy(
         onset_errors.append(onset_error_ms)
         offset_errors.append(offset_error_ms)
 
+    onset_arr = np.array(onset_errors, dtype=np.float64)
+    offset_arr = np.array(offset_errors, dtype=np.float64)
+
+    # Apply boundary tolerance filter if specified
+    if boundary_tolerance_ms is not None and onset_arr.size > 0:
+        keep = (np.abs(onset_arr) <= boundary_tolerance_ms) & (
+            np.abs(offset_arr) <= boundary_tolerance_ms
+        )
+        onset_arr = onset_arr[keep]
+        offset_arr = offset_arr[keep]
+
     return BoundaryAccuracy(
-        n_matches=n_matches,
-        onset_errors_ms=np.array(onset_errors, dtype=np.float64),
-        offset_errors_ms=np.array(offset_errors, dtype=np.float64),
+        n_matches=int(onset_arr.size),
+        onset_errors_ms=onset_arr,
+        offset_errors_ms=offset_arr,
     )

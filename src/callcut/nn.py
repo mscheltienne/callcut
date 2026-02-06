@@ -8,13 +8,9 @@ from typing import TYPE_CHECKING
 import torch
 import torch.nn as nn
 
-from callcut.nn._registry import get_model, register_model
-from callcut.utils._checks import check_type, ensure_device, ensure_int, ensure_path
-from callcut.utils.logs import logger
+from callcut.utils._checks import check_type, ensure_int
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from torch import Tensor
 
 
@@ -25,7 +21,7 @@ class BaseDetector(ABC, nn.Module):
 
     - ``forward``: Process input features and return logits.
     - ``receptive_field``: Property returning the receptive field in frames.
-    - ``_save_kwargs``: Return additional constructor kwargs for serialization.
+    - ``_save_config``: Return additional constructor kwargs for serialization.
 
     Models accept input of shape ``(batch, n_bands, time)`` and return logits of shape
     ``(batch, time)``.
@@ -63,7 +59,7 @@ class BaseDetector(ABC, nn.Module):
     ...     def forward(self, x: Tensor) -> Tensor:
     ...         return self._conv(x).squeeze(1)
     ...
-    ...     def _save_kwargs(self) -> dict:
+    ...     def _save_config(self) -> dict:
     ...         return {}  # no additional constructor args
     """
 
@@ -129,7 +125,7 @@ class BaseDetector(ABC, nn.Module):
         """
 
     @abstractmethod
-    def _save_kwargs(self) -> dict:
+    def _save_config(self) -> dict:
         """Return additional constructor kwargs needed for model reconstruction.
 
         Subclasses should override this to return a dictionary of any constructor
@@ -145,12 +141,12 @@ class BaseDetector(ABC, nn.Module):
         --------
         For a model with a ``base`` parameter:
 
-        >>> def _save_kwargs(self) -> dict:
+        >>> def _save_config(self) -> dict:
         ...     return {"base": self._base}
 
         For a model with no additional parameters:
 
-        >>> def _save_kwargs(self) -> dict:
+        >>> def _save_config(self) -> dict:
         ...     return {}
         """
 
@@ -195,12 +191,10 @@ class BaseDetector(ABC, nn.Module):
 
         Examples
         --------
-        >>> from callcut.nn import load_model
-        >>> from callcut.features import SNRExtractor
+        >>> from callcut.pipeline import load_pipeline
         >>> from callcut.io import load_audio
         >>>
-        >>> model = load_model("detector.pt", device="cpu")
-        >>> extractor = SNRExtractor(sample_rate=32000, hop_ms=8.0, n_bands=8)
+        >>> model, extractor, decoder = load_pipeline("pipeline.pt", device="cpu")
         >>>
         >>> waveform, sr = load_audio("recording.wav", sample_rate=32000)
         >>> features, times = extractor(waveform)
@@ -289,7 +283,6 @@ class BaseDetector(ABC, nn.Module):
         return probabilities
 
 
-@register_model
 class TinySegCNN(BaseDetector):
     """Lightweight 1D CNN for call detection.
 
@@ -377,108 +370,6 @@ class TinySegCNN(BaseDetector):
         """
         return self._network(x).squeeze(1)
 
-    def _save_kwargs(self) -> dict:
+    def _save_config(self) -> dict:
         """Return additional kwargs needed for reconstruction."""
         return {"base": self._base}
-
-
-def save_model(
-    model: BaseDetector,
-    fname: str | Path,
-    *,
-    overwrite: bool = False,
-) -> None:
-    """Save a model to a file.
-
-    Saves both the model state dict and metadata (class name, n_bands, window_frames,
-    receptive_field) needed for reconstruction.
-
-    Parameters
-    ----------
-    model : BaseDetector
-        The model to save.
-    fname : str | Path
-        Path to save the model. Conventionally use ``.pt`` extension.
-    overwrite : bool
-        If ``True``, overwrite the file if it exists. If ``False``, raises
-        an error if the file already exists.
-
-    See Also
-    --------
-    load_model : Load a model from a file.
-
-    Examples
-    --------
-    >>> model = TinySegCNN(n_bands=8, window_frames=250)
-    >>> save_model(model, "my_model.pt")
-    """
-    check_type(model, (BaseDetector,), "model")
-    fname = ensure_path(fname, must_exist=False)
-    if not overwrite and fname.exists():
-        raise FileExistsError(
-            f"File {fname} already exists. Use overwrite=True to replace it."
-        )
-    logger.info("Saving model to %s", fname)
-    checkpoint = {
-        "class_name": model.__class__.__name__,
-        "n_bands": model.n_bands,
-        "window_frames": model.window_frames,
-        "receptive_field": model.receptive_field,
-        "state_dict": model.state_dict(),
-        "kwargs": model._save_kwargs(),
-    }
-    torch.save(checkpoint, fname)
-
-
-def load_model(
-    fname: str | Path,
-    *,
-    device: str | torch.device | None = None,
-) -> BaseDetector:
-    """Load a model from a file.
-
-    Parameters
-    ----------
-    fname : str | Path
-        Path to the saved model file.
-    device : str | torch.device | None
-        Device to load the model to (e.g., ``"cpu"``, ``"cuda:0"``, ``"mps"``).
-        If ``None``, uses the default torch device.
-
-    Returns
-    -------
-    model : BaseDetector
-        The loaded model instance.
-
-    See Also
-    --------
-    save_model : Save a model to a file.
-
-    Examples
-    --------
-    >>> model = load_model("my_model.pt")
-    >>> model = load_model("my_model.pt", device="cpu")
-    """
-    fname = ensure_path(fname, must_exist=True)
-    device = ensure_device(device)
-    logger.info("Loading model from %s", fname)
-    checkpoint = torch.load(fname, map_location=device, weights_only=False)
-
-    class_name = checkpoint["class_name"]
-    n_bands = checkpoint["n_bands"]
-    window_frames = checkpoint["window_frames"]
-    kwargs = checkpoint.get("kwargs", {})
-
-    model = get_model(
-        class_name, n_bands=n_bands, window_frames=window_frames, **kwargs
-    )
-    model.load_state_dict(checkpoint["state_dict"])
-    model = model.to(device)
-    logger.debug(
-        "Loaded %s with n_bands=%d, window_frames=%d, receptive_field=%d",
-        class_name,
-        n_bands,
-        window_frames,
-        model.receptive_field,
-    )
-    return model

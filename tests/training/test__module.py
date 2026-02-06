@@ -222,23 +222,6 @@ class TestCallDetectorModuleValidationStep:
             assert param.grad is None or (param.grad == 0).all()
 
 
-class TestCallDetectorModuleTestStep:
-    """Tests for CallDetectorModule test_step."""
-
-    def test_test_step_returns_none(self) -> None:
-        """Test that test_step returns None."""
-        model = TinySegCNN(n_bands=8, window_frames=100)
-        loss = BCEWithLogitsLoss()
-        module = CallDetectorModule(model, loss=loss, lr=1e-3)
-
-        X = torch.randn(4, 8, 100)
-        y = torch.randint(0, 2, (4, 100)).float()
-
-        result = module.test_step((X, y), 0)
-
-        assert result is None
-
-
 class TestCallDetectorModuleOptimizer:
     """Tests for CallDetectorModule optimizer configuration."""
 

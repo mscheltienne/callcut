@@ -35,6 +35,20 @@ class BaseDecoder(ABC):
     """
 
     @abstractmethod
+    def _save_config(self) -> dict:
+        """Return constructor kwargs for serialization.
+
+        Subclasses must implement this to enable saving and loading of pipeline
+        configurations. The returned dictionary should contain all constructor
+        arguments needed to recreate the decoder.
+
+        Returns
+        -------
+        config : dict
+            Dictionary of constructor keyword arguments.
+        """
+
+    @abstractmethod
     def decode(
         self, times: torch.Tensor, probabilities: torch.Tensor
     ) -> list[Interval]:
@@ -182,6 +196,16 @@ class HysteresisDecoder(BaseDecoder):
         :type: :class:`float`
         """
         return self._pad_s
+
+    def _save_config(self) -> dict:
+        """Return constructor kwargs for serialization."""
+        return {
+            "enter_threshold": self._enter_threshold,
+            "exit_threshold": self._exit_threshold,
+            "min_duration_s": self._min_duration_s,
+            "min_gap_s": self._min_gap_s,
+            "pad_s": self._pad_s,
+        }
 
     def decode(
         self, times: torch.Tensor, probabilities: torch.Tensor

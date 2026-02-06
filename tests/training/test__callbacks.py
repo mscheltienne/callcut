@@ -10,7 +10,7 @@ import pytest
 import torch
 from numpy.testing import assert_allclose
 
-from callcut.nn import TinySegCNN, load_model
+from callcut.nn import TinySegCNN
 from callcut.training import (
     BCEWithLogitsLoss,
     CallDetectorModule,
@@ -181,8 +181,8 @@ class TestSaveBestModelCallback:
         with pytest.raises(TypeError):
             SaveBestModelCallback(tmp_path / "model.pt", monitor=123)  # type: ignore[arg-type]
 
-    def test_saves_best_model_max_mode(self, tmp_path: Path) -> None:
-        """Test that best model is saved in max mode."""
+    def test_saves_best_weights_max_mode(self, tmp_path: Path) -> None:
+        """Test that best weights are saved in max mode."""
         save_path = tmp_path / "best.pt"
         callback = SaveBestModelCallback(save_path, monitor="val_f1", mode="max")
         module = _create_mock_module()
@@ -192,12 +192,14 @@ class TestSaveBestModelCallback:
         callback.on_validation_epoch_end(trainer1, module)
         assert save_path.exists()
 
-        # Check saved model
-        loaded = load_model(save_path)
-        assert isinstance(loaded, TinySegCNN)
+        # Check saved file is a state_dict (not a full checkpoint)
+        loaded = torch.load(save_path, weights_only=True)
+        assert isinstance(loaded, dict)
+        # State dict keys should be model parameter names
+        assert any("_network" in k for k in loaded)
 
-    def test_saves_best_model_min_mode(self, tmp_path: Path) -> None:
-        """Test that best model is saved in min mode."""
+    def test_saves_best_weights_min_mode(self, tmp_path: Path) -> None:
+        """Test that best weights are saved in min mode."""
         save_path = tmp_path / "best.pt"
         callback = SaveBestModelCallback(save_path, monitor="val_loss", mode="min")
         module = _create_mock_module()
@@ -208,7 +210,7 @@ class TestSaveBestModelCallback:
         assert save_path.exists()
 
     def test_only_saves_on_improvement_max(self, tmp_path: Path) -> None:
-        """Test that model is only saved when metric improves (max mode)."""
+        """Test that weights are only saved when metric improves (max mode)."""
         save_path = tmp_path / "best.pt"
         callback = SaveBestModelCallback(save_path, monitor="val_f1", mode="max")
         module = _create_mock_module()
@@ -231,7 +233,7 @@ class TestSaveBestModelCallback:
         assert mtime3 > mtime1  # File was modified
 
     def test_only_saves_on_improvement_min(self, tmp_path: Path) -> None:
-        """Test that model is only saved when metric improves (min mode)."""
+        """Test that weights are only saved when metric improves (min mode)."""
         save_path = tmp_path / "best.pt"
         callback = SaveBestModelCallback(save_path, monitor="val_loss", mode="min")
         module = _create_mock_module()
@@ -293,3 +295,24 @@ class TestSaveBestModelCallback:
         callback.on_validation_epoch_end(trainer, module)
 
         assert Path(save_path).exists()
+
+    def test_saved_weights_can_be_loaded(self, tmp_path: Path) -> None:
+        """Test that saved weights can be loaded back into the model."""
+        save_path = tmp_path / "best.pt"
+        callback = SaveBestModelCallback(save_path, monitor="val_f1", mode="max")
+        module = _create_mock_module()
+
+        trainer = _create_mock_trainer({"val_f1": 0.8}, epoch=0)
+        callback.on_validation_epoch_end(trainer, module)
+
+        # Load weights into a fresh model
+        fresh_model = TinySegCNN(n_bands=8, window_frames=100)
+        state_dict = torch.load(save_path, weights_only=True)
+        fresh_model.load_state_dict(state_dict)
+
+        # Verify outputs match
+        x = torch.randn(1, 8, 100)
+        with torch.no_grad():
+            original_out = module.model(x)
+            loaded_out = fresh_model(x)
+        torch.testing.assert_close(original_out, loaded_out)

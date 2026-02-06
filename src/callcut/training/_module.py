@@ -158,31 +158,6 @@ class CallDetectorModule(L.LightningModule):
         self.log("val_recall", metrics.recall, on_step=False, on_epoch=True)
         self.log("val_f1", metrics.f1, on_step=False, on_epoch=True, prog_bar=True)
 
-    def test_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> None:
-        """Perform a single test step.
-
-        Parameters
-        ----------
-        batch : tuple of Tensor
-            Tuple of (features, labels) tensors.
-        batch_idx : int
-            Index of the current batch.
-        """
-        X, y = batch
-        logits = self(X)
-        loss = self._loss_fn(logits, y)
-        self.log("test_loss", loss, on_step=False, on_epoch=True)
-
-        # Compute frame-level metrics
-        probs = torch.sigmoid(logits)
-        probs_flat = probs.reshape(-1)
-        y_flat = y.reshape(-1)
-        metrics = compute_frame_metrics(probs_flat, y_flat, threshold=0.5)
-
-        self.log("test_precision", metrics.precision, on_step=False, on_epoch=True)
-        self.log("test_recall", metrics.recall, on_step=False, on_epoch=True)
-        self.log("test_f1", metrics.f1, on_step=False, on_epoch=True)
-
     def configure_optimizers(self) -> torch.optim.Optimizer:
         """Configure the optimizer.
 

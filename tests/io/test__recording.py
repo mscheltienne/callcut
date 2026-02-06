@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from callcut.features import BaseExtractor
+from callcut.extractors import BaseExtractor
 from callcut.io import RecordingInfo, scan_recordings
 
 
@@ -39,6 +39,13 @@ class _DummyExtractor(BaseExtractor):
         features = torch.randn(self._n_features, n_frames)
         times = torch.arange(n_frames) * (self._hop_ms / 1000.0)
         return features, times
+
+    def _save_config(self) -> dict:
+        return {
+            "sample_rate": self._sample_rate,
+            "hop_ms": self._hop_ms,
+            "n_features": self._n_features,
+        }
 
 
 @pytest.fixture(scope="module")

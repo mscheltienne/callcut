@@ -3,15 +3,13 @@ Model
 
 .. currentmodule:: callcut.nn
 
-``callcut.nn`` provides a set of neural network models and utilities for building and
-training neural networks. It includes a base detector class, a simple CNN model, and a
-registry for managing custom models.
+``callcut.nn`` provides neural network models for call detection.
 
-The :class:`~callcut.nn.BaseDetector` class implements the I/O roundtrip to save and
-load registered models.
+The :class:`~callcut.nn.BaseDetector` abstract class defines the interface for all
+models, including sliding-window inference via :meth:`~callcut.nn.BaseDetector.predict`.
 
-Built-in models
-~~~~~~~~~~~~~~~
+Models
+~~~~~~
 
 .. autosummary::
     :toctree: ../generated/api
@@ -19,22 +17,3 @@ Built-in models
 
     BaseDetector
     TinySegCNN
-
-The following utility allow an I/O roundtrip of the models:
-
-.. autosummary::
-    :toctree: ../generated/api
-
-    load_model
-    save_model
-
-Registry
-~~~~~~~~
-
-.. autosummary::
-    :toctree: ../generated/api
-
-    register_model
-    unregister_model
-    list_models
-    get_model

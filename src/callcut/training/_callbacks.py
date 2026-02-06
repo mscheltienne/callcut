@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import torch
 from lightning import Callback
 
-from callcut.nn import save_model
 from callcut.training._module import CallDetectorModule
 from callcut.utils._checks import check_type, check_value, ensure_path
 from callcut.utils.logs import logger, warn
@@ -105,15 +105,17 @@ class MetricsHistoryCallback(Callback):
 
 
 class SaveBestModelCallback(Callback):
-    """Callback that saves the best model using callcut's save_model function.
+    """Callback that saves the best model weights during training.
 
-    This callback monitors a metric and saves the model when it improves,
-    using :func:`~callcut.nn.save_model` for proper serialization with metadata.
+    Monitors a metric and saves the model's ``state_dict`` when it improves.
+    After training, load the best weights with :func:`torch.load` and
+    :meth:`model.load_state_dict`, then use :func:`~callcut.pipeline.save_pipeline`
+    to save the full pipeline.
 
     Parameters
     ----------
     save_path : Path | str
-        Path to save the best model.
+        Path to save the best model weights.
     monitor : str
         Metric to monitor (default: ``"val_f1"``).
     mode : str
@@ -126,8 +128,13 @@ class SaveBestModelCallback(Callback):
     >>>
     >>> trainer = L.Trainer(
     ...     max_epochs=10,
-    ...     callbacks=[SaveBestModelCallback("best_model.pt", monitor="val_f1")],
+    ...     callbacks=[SaveBestModelCallback("best_weights.pt", monitor="val_f1")],
     ... )
+    >>> trainer.fit(module, datamodule=dm)
+    >>>
+    >>> # After training, load best weights and save full pipeline
+    >>> model.load_state_dict(torch.load("best_weights.pt", weights_only=True))
+    >>> save_pipeline(model, extractor, "pipeline.pt", decoder=decoder)
     """
 
     def __init__(
@@ -152,7 +159,7 @@ class SaveBestModelCallback(Callback):
     def on_validation_epoch_end(
         self, trainer: Trainer, pl_module: LightningModule
     ) -> None:
-        """Check if model improved and save if so."""
+        """Check if model improved and save weights if so."""
         metrics = trainer.callback_metrics
         current_score = metrics.get(self._monitor)
 
@@ -165,14 +172,14 @@ class SaveBestModelCallback(Callback):
         if self._is_better(current_score, self._best_score):
             self._best_score = current_score
             logger.info(
-                "New best %s=%.4f, saving model to %s",
+                "New best %s=%.4f, saving weights to %s",
                 self._monitor,
                 current_score,
                 self._save_path,
             )
             # Get the underlying model from the Lightning module
             if isinstance(pl_module, CallDetectorModule):
-                save_model(pl_module.model, self._save_path, overwrite=True)
+                torch.save(pl_module.model.state_dict(), self._save_path)
             else:
                 warn(
                     "Cannot save model: pl_module is not a CallDetectorModule.",

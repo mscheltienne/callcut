@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from callcut.features._base import BaseExtractor
+from callcut.extractors._base import BaseExtractor
 from callcut.utils._checks import check_type, ensure_int
 from callcut.utils.logs import logger
 
@@ -364,6 +364,20 @@ class SNRExtractor(BaseExtractor):
             logger.debug("Applied robust normalization")
 
         return features, times
+
+    def _save_config(self) -> dict:
+        """Return constructor kwargs for serialization."""
+        return {
+            "sample_rate": self._sample_rate,
+            "hop_ms": self._hop_ms,
+            "n_bands": self._n_bands,
+            "win_ms": self._win_ms,
+            "band_low": self._band_low,
+            "band_high": self._band_high,
+            "baseline_s": self._baseline_s,
+            "normalize": self._normalize,
+            "eps": self._eps,
+        }
 
     def __hash__(self) -> int:
         """Return hash based on all parameters that affect output."""
