@@ -357,9 +357,7 @@ class TestCallDataModule:
                 num_workers=-1,
             )
 
-    def test_no_valid_recordings(
-        self, tmp_path: Path, extractor: SNRExtractor
-    ) -> None:
+    def test_no_valid_recordings(self, tmp_path: Path, extractor: SNRExtractor) -> None:
         """Test error when no valid recordings found."""
         # Create a file that exists but has no annotations
         fake_wav = tmp_path / "no_annotations.wav"

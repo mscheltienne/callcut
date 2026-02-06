@@ -11,6 +11,8 @@
 `callcut` relies on the `torch` ecosystem, thus audio-loading goes through `torchaudio`
 and `torchcodec` which requires `ffmpeg`.
 
+----------------------------------------------------------------------------------------
+
 <details>
 <summary>FFmpeg installation</summary>
 
@@ -44,6 +46,8 @@ On Windows:
 
 </details>
 
+----------------------------------------------------------------------------------------
+
 After that, the project can be installed as any python package. For installation from
 source using [uv](https://docs.astral.sh/uv/), you can use directly the keys:
 
@@ -52,7 +56,7 @@ uv sync --extra cpu
 uv sync --extra cu128
 ```
 
-To pull the torch binaries for your platform. Otherwise, you can pick either or the 2
+To pull the torch binaries for your platform. Otherwise, you can pick either of the 2
 extras with `pip install callcut[cpu]` or `pip install callcut[cu128]` which will
 resolve to the PyPI `torch` dependencies- or alternatively you can install `callcut`
 without any extra and manually install the `torch` dependencies from your preferred

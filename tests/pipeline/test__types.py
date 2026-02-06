@@ -23,48 +23,55 @@ from callcut.pipeline._types import (
 
 def _make_event_metrics(**kwargs: object) -> EventMetrics:
     """Create EventMetrics with defaults."""
-    defaults = dict(
-        n_ground_truth=3,
-        n_predicted=2,
-        tp=2,
-        fp=0,
-        fn=1,
-        precision=1.0,
-        recall=0.667,
-        f1=0.8,
-    )
+    defaults = {
+        "n_ground_truth": 3,
+        "n_predicted": 2,
+        "tp": 2,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.667,
+        "f1": 0.8,
+    }
     defaults.update(kwargs)
     return EventMetrics(**defaults)
 
 
 def _make_frame_metrics(**kwargs: object) -> FrameMetrics:
     """Create FrameMetrics with defaults."""
-    defaults = dict(
-        n_frames=100, tp=40, fp=5, fn=10, tn=45, precision=0.889, recall=0.8, f1=0.842
-    )
+    defaults = {
+        "n_frames": 100,
+        "tp": 40,
+        "fp": 5,
+        "fn": 10,
+        "tn": 45,
+        "precision": 0.889,
+        "recall": 0.8,
+        "f1": 0.842,
+    }
     defaults.update(kwargs)
     return FrameMetrics(**defaults)
 
 
 def _make_boundary_accuracy(**kwargs: object) -> BoundaryAccuracy:
     """Create BoundaryAccuracy with defaults."""
-    defaults = dict(
-        n_matches=2,
-        onset_errors_ms=np.array([10.0, -5.0]),
-        offset_errors_ms=np.array([20.0, -10.0]),
-    )
+    defaults = {
+        "n_matches": 2,
+        "onset_errors_ms": np.array([10.0, -5.0]),
+        "offset_errors_ms": np.array([20.0, -10.0]),
+    }
     defaults.update(kwargs)
     return BoundaryAccuracy(**defaults)
 
 
 def _make_recording_info(**kwargs: object) -> RecordingInfo:
     """Create RecordingInfo with defaults."""
-    defaults = dict(
-        audio_path=Path("/fake/audio.wav"),
-        annotation_path=Path("/fake/annotations.csv"),
-        duration_s=10.0,
-        n_annotations=3,
-    )
+    defaults = {
+        "audio_path": Path("/fake/audio.wav"),
+        "annotation_path": Path("/fake/annotations.csv"),
+        "duration_s": 10.0,
+        "n_annotations": 3,
+    }
     defaults.update(kwargs)
     return RecordingInfo(**defaults)
 

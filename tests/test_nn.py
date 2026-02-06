@@ -86,4 +86,3 @@ class TestTinySegCNN:
             x = torch.randn(2, 8, time_steps)
             output = model(x)
             assert output.shape == (2, time_steps)
-

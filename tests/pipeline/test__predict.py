@@ -28,26 +28,18 @@ class TestPredictRecordings:
     def test_returns_list_of_predictions(self, audio_files: list[Path]) -> None:
         """Test end-to-end prediction returns RecordingPrediction list."""
         extractor = SNRExtractor(sample_rate=32000)
-        model = TinySegCNN(
-            n_bands=extractor.n_features, window_frames=250, base=8
-        )
+        model = TinySegCNN(n_bands=extractor.n_features, window_frames=250, base=8)
         decoder = HysteresisDecoder()
-        results = predict_recordings(
-            model, extractor, audio_files[:1], decoder
-        )
+        results = predict_recordings(model, extractor, audio_files[:1], decoder)
         assert len(results) == 1
         assert isinstance(results[0], RecordingPrediction)
 
     def test_prediction_fields(self, audio_files: list[Path]) -> None:
         """Test that prediction results have expected fields."""
         extractor = SNRExtractor(sample_rate=32000)
-        model = TinySegCNN(
-            n_bands=extractor.n_features, window_frames=250, base=8
-        )
+        model = TinySegCNN(n_bands=extractor.n_features, window_frames=250, base=8)
         decoder = HysteresisDecoder()
-        results = predict_recordings(
-            model, extractor, audio_files[:1], decoder
-        )
+        results = predict_recordings(model, extractor, audio_files[:1], decoder)
         pred = results[0]
         assert pred.audio_path.exists()
         assert isinstance(pred.intervals, tuple)
@@ -58,14 +50,10 @@ class TestPredictRecordings:
     def test_multiple_files(self, audio_files: list[Path]) -> None:
         """Test prediction on multiple files."""
         extractor = SNRExtractor(sample_rate=32000)
-        model = TinySegCNN(
-            n_bands=extractor.n_features, window_frames=250, base=8
-        )
+        model = TinySegCNN(n_bands=extractor.n_features, window_frames=250, base=8)
         decoder = HysteresisDecoder()
         n = min(2, len(audio_files))
-        results = predict_recordings(
-            model, extractor, audio_files[:n], decoder
-        )
+        results = predict_recordings(model, extractor, audio_files[:n], decoder)
         assert len(results) == n
 
     def test_nonexistent_path_raises(self) -> None:
@@ -81,11 +69,7 @@ class TestPredictRecordings:
     def test_accepts_string_paths(self, audio_files: list[Path]) -> None:
         """Test that string paths are accepted."""
         extractor = SNRExtractor(sample_rate=32000)
-        model = TinySegCNN(
-            n_bands=extractor.n_features, window_frames=250, base=8
-        )
+        model = TinySegCNN(n_bands=extractor.n_features, window_frames=250, base=8)
         decoder = HysteresisDecoder()
-        results = predict_recordings(
-            model, extractor, [str(audio_files[0])], decoder
-        )
+        results = predict_recordings(model, extractor, [str(audio_files[0])], decoder)
         assert len(results) == 1

@@ -52,9 +52,7 @@ def _infer_recording(
     intervals : list of Interval
         Decoded call intervals.
     """
-    waveform, _ = load_audio(
-        audio_path, sample_rate=extractor.sample_rate, mono=True
-    )
+    waveform, _ = load_audio(audio_path, sample_rate=extractor.sample_rate, mono=True)
     features, times = extractor.extract(waveform)
     features = features.to(device)
 

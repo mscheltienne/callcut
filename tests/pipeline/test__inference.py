@@ -20,9 +20,7 @@ class TestInferRecording:
         """Test that _infer_recording returns (probabilities, times, intervals)."""
         audio_path = sorted(assets_path.glob("*.wav"))[0]
         extractor = SNRExtractor(sample_rate=32000)
-        model = TinySegCNN(
-            n_bands=extractor.n_features, window_frames=250, base=8
-        )
+        model = TinySegCNN(n_bands=extractor.n_features, window_frames=250, base=8)
         decoder = HysteresisDecoder()
         device = torch.device("cpu")
 
@@ -36,9 +34,7 @@ class TestInferRecording:
         """Test probabilities are 1D CPU tensors in [0, 1]."""
         audio_path = sorted(assets_path.glob("*.wav"))[0]
         extractor = SNRExtractor(sample_rate=32000)
-        model = TinySegCNN(
-            n_bands=extractor.n_features, window_frames=250, base=8
-        )
+        model = TinySegCNN(n_bands=extractor.n_features, window_frames=250, base=8)
         decoder = HysteresisDecoder()
         device = torch.device("cpu")
 
@@ -54,9 +50,7 @@ class TestInferRecording:
         """Test times tensor matches probabilities length."""
         audio_path = sorted(assets_path.glob("*.wav"))[0]
         extractor = SNRExtractor(sample_rate=32000)
-        model = TinySegCNN(
-            n_bands=extractor.n_features, window_frames=250, base=8
-        )
+        model = TinySegCNN(n_bands=extractor.n_features, window_frames=250, base=8)
         decoder = HysteresisDecoder()
         device = torch.device("cpu")
 
@@ -70,9 +64,7 @@ class TestInferRecording:
         """Test that decoded intervals are a list of Interval."""
         audio_path = sorted(assets_path.glob("*.wav"))[0]
         extractor = SNRExtractor(sample_rate=32000)
-        model = TinySegCNN(
-            n_bands=extractor.n_features, window_frames=250, base=8
-        )
+        model = TinySegCNN(n_bands=extractor.n_features, window_frames=250, base=8)
         decoder = HysteresisDecoder()
         device = torch.device("cpu")
 

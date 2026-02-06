@@ -154,8 +154,7 @@ def evaluate_recordings(
     report = _aggregate_evaluations(per_recording)
 
     logger.info(
-        "Evaluation complete: %d recordings, event F1=%.3f, frame F1=%.3f, "
-        "FP/min=%.3f",
+        "Evaluation complete: %d recordings, event F1=%.3f, frame F1=%.3f, FP/min=%.3f",
         len(recordings),
         report.event_metrics.f1,
         report.frame_metrics.f1,

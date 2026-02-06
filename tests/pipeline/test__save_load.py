@@ -14,7 +14,7 @@ from callcut.nn import BaseDetector, TinySegCNN
 from callcut.pipeline._save_load import load_pipeline, save_pipeline
 
 
-@pytest.fixture()
+@pytest.fixture
 def pipeline_components() -> tuple[TinySegCNN, SNRExtractor, HysteresisDecoder]:
     """Create a model, extractor, and decoder for testing."""
     extractor = SNRExtractor(sample_rate=32000, hop_ms=8.0, n_bands=8)
@@ -180,17 +180,3 @@ class TestLoadPipeline:
         """Test that loading a nonexistent file raises."""
         with pytest.raises((FileNotFoundError, RuntimeError)):
             load_pipeline("/nonexistent/pipeline.pt", device="cpu")
-
-    def test_returns_three_tuple(
-        self,
-        pipeline_components: tuple[TinySegCNN, SNRExtractor, HysteresisDecoder],
-        tmp_path: Path,
-    ) -> None:
-        """Test that load_pipeline returns a 3-tuple."""
-        model, extractor, decoder = pipeline_components
-        fname = tmp_path / "pipeline.pt"
-        save_pipeline(model, extractor, decoder, fname)
-
-        result = load_pipeline(fname, device="cpu")
-        assert isinstance(result, tuple)
-        assert len(result) == 3

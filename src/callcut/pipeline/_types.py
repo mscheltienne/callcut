@@ -121,5 +121,3 @@ class RecordingPrediction:
             f"n_intervals={len(self.intervals)}, "
             f"duration={self.duration_s:.1f}s)"
         )
-
-
