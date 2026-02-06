@@ -19,8 +19,10 @@ from callcut.evaluation._types import (
     FrameMetrics,
     Interval,
 )
-from callcut.io import intervals_to_frame_labels, load_annotations, load_audio
+from callcut.evaluation._utils import _precision_recall_f1
+from callcut.io import intervals_to_frame_labels, load_annotations
 from callcut.nn import BaseDetector
+from callcut.pipeline._inference import _infer_recording
 from callcut.pipeline._types import EvaluationReport, RecordingEvaluation
 from callcut.utils._checks import check_type
 from callcut.utils.logs import logger
@@ -95,39 +97,16 @@ def evaluate_recordings(
     if len(recordings) == 0:
         raise ValueError("No recordings to evaluate.")
 
+    device = next(model.parameters()).device
     per_recording: list[RecordingEvaluation] = []
-
-    # Aggregation accumulators
-    total_tp = 0
-    total_fp = 0
-    total_fn = 0
-    total_frame_tp = 0
-    total_frame_fp = 0
-    total_frame_fn = 0
-    total_frame_tn = 0
-    total_n_frames = 0
-    all_onset_errors: list[np.ndarray] = []
-    all_offset_errors: list[np.ndarray] = []
-    total_duration_s = 0.0
 
     for rec in recordings:
         logger.info("Evaluating %s", rec.audio_path.name)
 
-        # Load audio and extract features
-        waveform, _ = load_audio(
-            rec.audio_path, sample_rate=extractor.sample_rate, mono=True
+        # Inference: load audio, extract features, predict, decode
+        probabilities, times, predictions = _infer_recording(
+            model, extractor, decoder, rec.audio_path, device, hop_frames
         )
-        features, times = extractor.extract(waveform)
-
-        # Move features to model's device
-        device = next(model.parameters()).device
-        features = features.to(device)
-
-        # Predict frame probabilities
-        probabilities = model.predict(features, hop_frames=hop_frames)
-
-        # Decode to intervals
-        predictions = decoder.decode(times, probabilities.cpu())
 
         # Load ground truth annotations
         annotations = load_annotations(rec.annotation_path)
@@ -137,7 +116,7 @@ def evaluate_recordings(
 
         # Compute frame labels and frame metrics
         frame_labels = intervals_to_frame_labels(annotations, times)
-        frame_metrics = compute_frame_metrics(probabilities.cpu(), frame_labels)
+        frame_metrics = compute_frame_metrics(probabilities, frame_labels)
 
         # Match and compute event metrics
         matches = matcher.match(ground_truth, predictions)
@@ -149,30 +128,17 @@ def evaluate_recordings(
             boundary_tolerance_ms=boundary_tolerance_ms,
         )
 
-        # Store per-recording result
-        rec_eval = RecordingEvaluation(
-            recording=rec,
-            ground_truth=tuple(ground_truth),
-            predictions=tuple(predictions),
-            matches=tuple(matches),
-            event_metrics=event_metrics,
-            boundary_accuracy=boundary_accuracy,
-            frame_metrics=frame_metrics,
+        per_recording.append(
+            RecordingEvaluation(
+                recording=rec,
+                ground_truth=tuple(ground_truth),
+                predictions=tuple(predictions),
+                matches=tuple(matches),
+                event_metrics=event_metrics,
+                boundary_accuracy=boundary_accuracy,
+                frame_metrics=frame_metrics,
+            )
         )
-        per_recording.append(rec_eval)
-
-        # Accumulate for aggregation
-        total_tp += event_metrics.tp
-        total_fp += event_metrics.fp
-        total_fn += event_metrics.fn
-        total_frame_tp += frame_metrics.tp
-        total_frame_fp += frame_metrics.fp
-        total_frame_fn += frame_metrics.fn
-        total_frame_tn += frame_metrics.tn
-        total_n_frames += frame_metrics.n_frames
-        all_onset_errors.append(boundary_accuracy.onset_errors_ms)
-        all_offset_errors.append(boundary_accuracy.offset_errors_ms)
-        total_duration_s += rec.duration_s
 
         logger.debug(
             "  %s: gt=%d, pred=%d, tp=%d, fp=%d, fn=%d, event_f1=%.3f",
@@ -185,68 +151,70 @@ def evaluate_recordings(
             event_metrics.f1,
         )
 
-    # Aggregate event metrics
-    eps = 1e-12
-    agg_precision = (
-        total_tp / (total_tp + total_fp + eps) if (total_tp + total_fp) > 0 else 0.0
+    report = _aggregate_evaluations(per_recording)
+
+    logger.info(
+        "Evaluation complete: %d recordings, event F1=%.3f, frame F1=%.3f, "
+        "FP/min=%.3f",
+        len(recordings),
+        report.event_metrics.f1,
+        report.frame_metrics.f1,
+        report.fp_per_minute,
     )
-    agg_recall = (
-        total_tp / (total_tp + total_fn + eps) if (total_tp + total_fn) > 0 else 0.0
-    )
-    agg_f1 = (
-        2 * agg_precision * agg_recall / (agg_precision + agg_recall + eps)
-        if (agg_precision + agg_recall) > 0
-        else 0.0
-    )
-    total_gt = sum(len(r.ground_truth) for r in per_recording)
-    total_pred = sum(len(r.predictions) for r in per_recording)
+
+    return report
+
+
+def _aggregate_evaluations(
+    evaluations: list[RecordingEvaluation],
+) -> EvaluationReport:
+    """Aggregate per-recording evaluations into a single report."""
+    # Event-level aggregation
+    total_tp = sum(r.event_metrics.tp for r in evaluations)
+    total_fp = sum(r.event_metrics.fp for r in evaluations)
+    total_fn = sum(r.event_metrics.fn for r in evaluations)
+    precision, recall, f1 = _precision_recall_f1(total_tp, total_fp, total_fn)
     agg_event_metrics = EventMetrics(
-        n_ground_truth=total_gt,
-        n_predicted=total_pred,
+        n_ground_truth=sum(len(r.ground_truth) for r in evaluations),
+        n_predicted=sum(len(r.predictions) for r in evaluations),
         tp=total_tp,
         fp=total_fp,
         fn=total_fn,
-        precision=agg_precision,
-        recall=agg_recall,
-        f1=agg_f1,
+        precision=precision,
+        recall=recall,
+        f1=f1,
     )
 
-    # Aggregate frame metrics
-    frame_precision = (
-        total_frame_tp / (total_frame_tp + total_frame_fp + eps)
-        if (total_frame_tp + total_frame_fp) > 0
-        else 0.0
-    )
-    frame_recall = (
-        total_frame_tp / (total_frame_tp + total_frame_fn + eps)
-        if (total_frame_tp + total_frame_fn) > 0
-        else 0.0
-    )
-    frame_f1 = (
-        2 * frame_precision * frame_recall / (frame_precision + frame_recall + eps)
-        if (frame_precision + frame_recall) > 0
-        else 0.0
+    # Frame-level aggregation
+    frame_tp = sum(r.frame_metrics.tp for r in evaluations)
+    frame_fp = sum(r.frame_metrics.fp for r in evaluations)
+    frame_fn = sum(r.frame_metrics.fn for r in evaluations)
+    frame_tn = sum(r.frame_metrics.tn for r in evaluations)
+    frame_precision, frame_recall, frame_f1 = _precision_recall_f1(
+        frame_tp, frame_fp, frame_fn
     )
     agg_frame_metrics = FrameMetrics(
-        n_frames=total_n_frames,
-        tp=total_frame_tp,
-        fp=total_frame_fp,
-        fn=total_frame_fn,
-        tn=total_frame_tn,
+        n_frames=sum(r.frame_metrics.n_frames for r in evaluations),
+        tp=frame_tp,
+        fp=frame_fp,
+        fn=frame_fn,
+        tn=frame_tn,
         precision=frame_precision,
         recall=frame_recall,
         f1=frame_f1,
     )
 
-    # Aggregate boundary accuracy
+    # Boundary accuracy aggregation
+    all_onset = [r.boundary_accuracy.onset_errors_ms for r in evaluations]
+    all_offset = [r.boundary_accuracy.offset_errors_ms for r in evaluations]
     onset_errors = (
-        np.concatenate(all_onset_errors)
-        if any(e.size > 0 for e in all_onset_errors)
+        np.concatenate(all_onset)
+        if any(e.size > 0 for e in all_onset)
         else np.array([], dtype=np.float64)
     )
     offset_errors = (
-        np.concatenate(all_offset_errors)
-        if any(e.size > 0 for e in all_offset_errors)
+        np.concatenate(all_offset)
+        if any(e.size > 0 for e in all_offset)
         else np.array([], dtype=np.float64)
     )
     agg_boundary = BoundaryAccuracy(
@@ -256,26 +224,17 @@ def evaluate_recordings(
     )
 
     # FP per minute
+    total_duration_s = sum(r.recording.duration_s for r in evaluations)
     total_duration_minutes = total_duration_s / 60.0
     fp_per_minute = (
         total_fp / total_duration_minutes if total_duration_minutes > 0 else 0.0
     )
 
-    report = EvaluationReport(
-        recordings=tuple(per_recording),
+    return EvaluationReport(
+        recordings=tuple(evaluations),
         event_metrics=agg_event_metrics,
         boundary_accuracy=agg_boundary,
         frame_metrics=agg_frame_metrics,
         fp_per_minute=fp_per_minute,
         total_duration_minutes=total_duration_minutes,
     )
-
-    logger.info(
-        "Evaluation complete: %d recordings, event F1=%.3f, frame F1=%.3f, FP/min=%.3f",
-        len(recordings),
-        agg_f1,
-        frame_f1,
-        fp_per_minute,
-    )
-
-    return report

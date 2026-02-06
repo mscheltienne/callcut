@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from callcut.evaluation import BaseDecoder
-from callcut.io import load_audio
 from callcut.nn import BaseDetector
+from callcut.pipeline._inference import _infer_recording
 from callcut.pipeline._types import RecordingPrediction
 from callcut.utils._checks import check_type, ensure_path
 from callcut.utils.logs import logger
@@ -71,18 +71,10 @@ def predict_recordings(
         audio_path = ensure_path(audio_path, must_exist=True)
         logger.info("Predicting on %s", audio_path.name)
 
-        # Load audio and extract features
-        waveform, _ = load_audio(
-            audio_path, sample_rate=extractor.sample_rate, mono=True
+        _, times, intervals = _infer_recording(
+            model, extractor, decoder, audio_path, device, hop_frames
         )
-        features, times = extractor.extract(waveform)
-        features = features.to(device)
 
-        # Predict and decode
-        probabilities = model.predict(features, hop_frames=hop_frames)
-        intervals = decoder.decode(times, probabilities.cpu())
-
-        # Compute duration from the time axis
         duration_s = float(times[-1] - times[0]) if len(times) > 1 else 0.0
 
         results.append(

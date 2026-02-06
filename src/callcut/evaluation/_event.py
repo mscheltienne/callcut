@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from callcut.evaluation._types import EventMetrics, Interval, Match
+from callcut.evaluation._utils import _precision_recall_f1
 
 
 def compute_event_metrics(
@@ -77,15 +78,7 @@ def compute_event_metrics(
     fp = n_pred - tp
     fn = n_gt - tp
 
-    # Compute precision, recall, F1 with epsilon to avoid division by zero
-    eps = 1e-12
-    precision = tp / (tp + fp + eps) if (tp + fp) > 0 else 0.0
-    recall = tp / (tp + fn + eps) if (tp + fn) > 0 else 0.0
-    f1 = (
-        2 * precision * recall / (precision + recall + eps)
-        if (precision + recall) > 0
-        else 0.0
-    )
+    precision, recall, f1 = _precision_recall_f1(tp, fp, fn)
 
     return EventMetrics(
         n_ground_truth=n_gt,

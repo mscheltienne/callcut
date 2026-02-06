@@ -6,6 +6,7 @@ import numpy as np
 from torch import Tensor
 
 from callcut.evaluation._types import FrameMetrics
+from callcut.evaluation._utils import _precision_recall_f1
 from callcut.utils._checks import check_type
 
 
@@ -89,15 +90,7 @@ def compute_frame_metrics(
     fn = int(((predictions == 0) & (labels_binary == 1)).sum())
     tn = int(((predictions == 0) & (labels_binary == 0)).sum())
 
-    # Compute metrics with epsilon to avoid division by zero
-    eps = 1e-12
-    precision = tp / (tp + fp + eps) if (tp + fp) > 0 else 0.0
-    recall = tp / (tp + fn + eps) if (tp + fn) > 0 else 0.0
-    f1 = (
-        2 * precision * recall / (precision + recall + eps)
-        if (precision + recall) > 0
-        else 0.0
-    )
+    precision, recall, f1 = _precision_recall_f1(tp, fp, fn)
 
     return FrameMetrics(
         n_frames=probs_np.size,
