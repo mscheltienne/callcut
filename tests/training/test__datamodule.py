@@ -45,7 +45,6 @@ class TestSplitByWindows:
             window_hop_s=0.5,
             train_frac=0.7,
             val_frac=0.15,
-            seed=42,
         )
         assert isinstance(train, list)
         assert isinstance(val, list)
@@ -65,7 +64,6 @@ class TestSplitByWindows:
             window_hop_s=0.5,
             train_frac=0.7,
             val_frac=0.15,
-            seed=42,
         )
         total = len(train) + len(val) + len(test)
         assert total == len(recordings)
@@ -84,7 +82,6 @@ class TestSplitByWindows:
             window_hop_s=0.5,
             train_frac=0.7,
             val_frac=0.15,
-            seed=42,
         )
         train_paths = {r.audio_path for r in train}
         val_paths = {r.audio_path for r in val}
@@ -93,72 +90,6 @@ class TestSplitByWindows:
         assert train_paths.isdisjoint(val_paths)
         assert train_paths.isdisjoint(test_paths)
         assert val_paths.isdisjoint(test_paths)
-
-    def test_reproducible_with_seed(
-        self, all_audio_files: list[Path], dummy_extractor: DummyExtractor
-    ) -> None:
-        """Test that same seed produces same split."""
-        from callcut.io import scan_recordings
-
-        recordings = scan_recordings(all_audio_files)
-
-        train1, val1, test1 = _split_by_windows(
-            recordings,
-            dummy_extractor,
-            window_s=2.0,
-            window_hop_s=0.5,
-            train_frac=0.7,
-            val_frac=0.15,
-            seed=42,
-        )
-        train2, val2, test2 = _split_by_windows(
-            recordings,
-            dummy_extractor,
-            window_s=2.0,
-            window_hop_s=0.5,
-            train_frac=0.7,
-            val_frac=0.15,
-            seed=42,
-        )
-
-        assert [r.audio_path for r in train1] == [r.audio_path for r in train2]
-        assert [r.audio_path for r in val1] == [r.audio_path for r in val2]
-        assert [r.audio_path for r in test1] == [r.audio_path for r in test2]
-
-    def test_different_seeds_differ(
-        self, all_audio_files: list[Path], dummy_extractor: DummyExtractor
-    ) -> None:
-        """Test that different seeds produce different splits."""
-        from callcut.io import scan_recordings
-
-        recordings = scan_recordings(all_audio_files)
-
-        train1, _, _ = _split_by_windows(
-            recordings,
-            dummy_extractor,
-            window_s=2.0,
-            window_hop_s=0.5,
-            train_frac=0.7,
-            val_frac=0.15,
-            seed=42,
-        )
-        train2, _, _ = _split_by_windows(
-            recordings,
-            dummy_extractor,
-            window_s=2.0,
-            window_hop_s=0.5,
-            train_frac=0.7,
-            val_frac=0.15,
-            seed=123,
-        )
-
-        # With different seeds, at least one recording should differ
-        paths1 = {r.audio_path for r in train1}
-        paths2 = {r.audio_path for r in train2}
-        # May be same by chance, but likely different
-        # Just ensure both are valid
-        assert len(paths1) > 0
-        assert len(paths2) > 0
 
     def test_train_not_empty(
         self, all_audio_files: list[Path], dummy_extractor: DummyExtractor
@@ -174,7 +105,6 @@ class TestSplitByWindows:
             window_hop_s=0.5,
             train_frac=0.7,
             val_frac=0.15,
-            seed=42,
         )
         assert len(train) > 0
 
@@ -199,7 +129,6 @@ class TestSplitByWindows:
                 window_hop_s=0.5,
                 train_frac=0.7,
                 val_frac=0.15,
-                seed=42,
             )
 
 

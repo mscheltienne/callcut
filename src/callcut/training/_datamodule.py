@@ -25,7 +25,6 @@ def _split_by_windows(
     window_hop_s: float,
     train_frac: float,
     val_frac: float,
-    seed: int | None,
 ) -> tuple[list[RecordingInfo], list[RecordingInfo], list[RecordingInfo]]:
     """Split recordings into train/val/test sets balanced by window count.
 
@@ -46,8 +45,6 @@ def _split_by_windows(
         Target fraction of windows for training.
     val_frac : float
         Target fraction of windows for validation.
-    seed : int | None
-        Random seed for shuffling.
 
     Returns
     -------
@@ -57,6 +54,12 @@ def _split_by_windows(
         Validation recordings.
     test : list of RecordingInfo
         Test recordings.
+
+    Notes
+    -----
+    Shuffling uses the legacy NumPy random API, which is seeded by
+    ``lightning.seed_everything()``. Call it before this function for
+    reproducible splits.
     """
     # Compute window counts for each recording
     window_counts = [
@@ -72,9 +75,8 @@ def _split_by_windows(
 
     total_windows = sum(n for _, n in window_counts)
 
-    # Shuffle recordings
-    rng = np.random.default_rng(seed)
-    rng.shuffle(window_counts)
+    # Shuffle recordings (uses legacy np.random, seeded by L.seed_everything)
+    np.random.shuffle(window_counts)
 
     # Greedily assign recordings to splits
     target_train = train_frac * total_windows
@@ -146,8 +148,6 @@ class CallDataModule(LightningDataModule):
         Batch size for DataLoaders.
     num_workers : int
         Number of workers for DataLoaders.
-    seed : int | None
-        Random seed for reproducible splits.
 
     Notes
     -----
@@ -155,6 +155,9 @@ class CallDataModule(LightningDataModule):
     count** rather than file count. This ensures each split contains
     approximately the target fraction of training samples, even when
     recordings have different durations.
+
+    For reproducible splits, call ``lightning.seed_everything(seed)`` before
+    instantiating and calling :meth:`setup`.
 
     Only the ``"fit"`` stage is supported for :meth:`setup`. For evaluation on
     the held-out test split, use :func:`~callcut.pipeline.evaluate_recordings`
@@ -196,7 +199,6 @@ class CallDataModule(LightningDataModule):
         window_hop_s: float = 0.5,
         batch_size: int = 32,
         num_workers: int = 4,
-        seed: int | None = 42,
     ) -> None:
         super().__init__()
 
@@ -208,8 +210,6 @@ class CallDataModule(LightningDataModule):
         check_type(window_hop_s, ("numeric",), "window_hop_s")
         batch_size = ensure_int(batch_size, "batch_size")
         num_workers = ensure_int(num_workers, "num_workers")
-        if seed is not None:
-            seed = ensure_int(seed, "seed")
 
         total_frac = train_frac + val_frac + test_frac
         if abs(total_frac - 1.0) > 0.01:
@@ -247,7 +247,6 @@ class CallDataModule(LightningDataModule):
         self._window_hop_s = float(window_hop_s)
         self._batch_size = batch_size
         self._num_workers = num_workers
-        self._seed = seed
 
         # Will be set in setup()
         self._train_recordings: list[RecordingInfo] = []
@@ -288,7 +287,6 @@ class CallDataModule(LightningDataModule):
                     self._window_hop_s,
                     self._train_frac,
                     self._val_frac,
-                    self._seed,
                 )
             )
 
