@@ -140,19 +140,7 @@ def load_annotations(fname: str | Path) -> NDArray[np.floating]:
     fname = ensure_path(fname, must_exist=True)
     logger.debug("Loading annotations from: %s", fname)
 
-    df = pd.read_csv(fname)
-
-    # check required columns
-    required = {"start_seconds", "stop_seconds"}
-    if not required.issubset(df.columns):
-        raise ValueError(
-            f"CSV file must contain 'start_seconds' and 'stop_seconds' columns. "
-            f"Found columns: {list(df.columns)}"
-        )
-
-    # drop rows with missing values and invalid intervals
-    df = df.dropna(subset=["start_seconds", "stop_seconds"])
-    df = df[df["stop_seconds"] > df["start_seconds"]]
+    df = _read_annotation_csv(fname)
 
     if len(df) == 0:
         warn(f"No valid intervals found in {fname}", ignore_namespaces=("callcut",))
@@ -167,3 +155,39 @@ def load_annotations(fname: str | Path) -> NDArray[np.floating]:
 
     logger.debug("Loaded %d intervals from %s", len(intervals), fname)
     return intervals
+
+
+def _read_annotation_csv(fname: Path) -> pd.DataFrame:
+    """Read and validate an annotation CSV file.
+
+    Parameters
+    ----------
+    fname : Path
+        Path to the CSV annotation file.
+
+    Returns
+    -------
+    df : DataFrame
+        Validated DataFrame with ``start_seconds`` and ``stop_seconds`` columns.
+        Rows with missing values or invalid intervals (stop <= start) are dropped.
+
+    Raises
+    ------
+    ValueError
+        If the CSV is missing the required columns.
+    """
+    df = pd.read_csv(fname)
+
+    # check required columns
+    required = {"start_seconds", "stop_seconds"}
+    if not required.issubset(df.columns):
+        raise ValueError(
+            f"CSV file must contain 'start_seconds' and 'stop_seconds' columns. "
+            f"Found columns: {list(df.columns)}"
+        )
+
+    # drop rows with missing values and invalid intervals
+    df = df.dropna(subset=["start_seconds", "stop_seconds"])
+    df = df[df["stop_seconds"] > df["start_seconds"]]
+
+    return df

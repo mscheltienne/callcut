@@ -5,65 +5,16 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-import torch
 
-from callcut.extractors import BaseExtractor
 from callcut.io import RecordingInfo, scan_recordings
 
-
-class _DummyExtractor(BaseExtractor):
-    """Minimal extractor for testing."""
-
-    def __init__(
-        self, sample_rate: int = 32000, hop_ms: float = 8.0, n_features: int = 8
-    ) -> None:
-        super().__init__(sample_rate)
-        self._hop_ms = hop_ms
-        self._n_features = n_features
-
-    @property
-    def n_features(self) -> int:
-        return self._n_features
-
-    @property
-    def hop_ms(self) -> float:
-        return self._hop_ms
-
-    def __hash__(self) -> int:
-        return hash((self._sample_rate, self._hop_ms, self._n_features))
-
-    def extract(self, waveform: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        n_samples = waveform.shape[-1]
-        hop_samples = int(self._hop_ms * self._sample_rate / 1000)
-        n_frames = n_samples // hop_samples
-        features = torch.randn(self._n_features, n_frames)
-        times = torch.arange(n_frames) * (self._hop_ms / 1000.0)
-        return features, times
-
-    def _save_config(self) -> dict:
-        return {
-            "sample_rate": self._sample_rate,
-            "hop_ms": self._hop_ms,
-            "n_features": self._n_features,
-        }
+from tests.conftest import DummyExtractor
 
 
 @pytest.fixture(scope="module")
-def assets_path() -> Path:
-    """Path to test assets directory."""
-    return Path(__file__).parents[1] / "assets"
-
-
-@pytest.fixture(scope="module")
-def all_audio_files(assets_path: Path) -> list[Path]:
-    """All audio files in assets directory."""
-    return sorted(assets_path.glob("*.wav"))
-
-
-@pytest.fixture(scope="module")
-def extractor() -> _DummyExtractor:
+def extractor() -> DummyExtractor:
     """Dummy extractor for testing."""  # noqa: D401
-    return _DummyExtractor(sample_rate=32000, hop_ms=8.0, n_features=8)
+    return DummyExtractor(sample_rate=32000, hop_ms=8.0, n_features=8)
 
 
 @pytest.fixture(scope="module")
@@ -101,7 +52,7 @@ class TestRecordingInfo:
         assert "n_annotations=" in repr_str
 
     def test_estimate_frames(
-        self, valid_recordings: list[RecordingInfo], extractor: _DummyExtractor
+        self, valid_recordings: list[RecordingInfo], extractor: DummyExtractor
     ) -> None:
         """Test estimate_frames method."""
         recording = valid_recordings[0]
@@ -113,7 +64,7 @@ class TestRecordingInfo:
         assert abs(n_frames - expected) <= 1
 
     def test_estimate_windows(
-        self, valid_recordings: list[RecordingInfo], extractor: _DummyExtractor
+        self, valid_recordings: list[RecordingInfo], extractor: DummyExtractor
     ) -> None:
         """Test estimate_windows method."""
         recording = valid_recordings[0]
@@ -132,7 +83,7 @@ class TestRecordingInfo:
             duration_s=0.5,  # 500ms
             n_annotations=1,
         )
-        extractor = _DummyExtractor(sample_rate=32000, hop_ms=8.0)
+        extractor = DummyExtractor(sample_rate=32000, hop_ms=8.0)
         n_windows = recording.estimate_windows(
             extractor, window_s=2.0, window_hop_s=0.5
         )

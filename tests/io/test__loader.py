@@ -19,12 +19,6 @@ _SAMPLES = [
 ]
 
 
-@pytest.fixture(scope="module")
-def assets_path() -> Path:
-    """Path to test assets directory."""
-    return Path(__file__).parents[1] / "assets"
-
-
 @pytest.fixture(scope="module", params=_SAMPLES)
 def audio_file(request: pytest.FixtureRequest, assets_path: Path) -> Path:
     """Test audio file, parametrized over all samples."""

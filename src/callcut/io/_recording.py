@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import pandas as pd
 from torchcodec.decoders import AudioDecoder
 
+from callcut.io._loader import _read_annotation_csv
 from callcut.utils._checks import ensure_path
 from callcut.utils.logs import logger
 
@@ -158,15 +158,7 @@ def scan_recordings(recordings: list[Path | str]) -> list[RecordingInfo]:
 
         # Count valid annotations
         try:
-            df = pd.read_csv(annotation_path)
-            if not {"start_seconds", "stop_seconds"}.issubset(df.columns):
-                logger.warning(
-                    "Skipping %s: annotation file missing required columns",
-                    recording.name,
-                )
-                continue
-            df = df.dropna(subset=["start_seconds", "stop_seconds"])
-            df = df[df["stop_seconds"] > df["start_seconds"]]
+            df = _read_annotation_csv(annotation_path)
             n_annotations = len(df)
         except Exception as exc:
             logger.warning(

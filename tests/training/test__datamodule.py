@@ -5,63 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-import torch
 from torch.utils.data import DataLoader
 
-from callcut.extractors import BaseExtractor, SNRExtractor
+from callcut.extractors import SNRExtractor
 from callcut.io import RecordingInfo
 from callcut.training._datamodule import CallDataModule, _split_by_windows
 
+from tests.conftest import DummyExtractor
+
 pytestmark = pytest.mark.filterwarnings("ignore:.*pin_memory.*:UserWarning")
-
-
-class _DummyExtractor(BaseExtractor):
-    """Minimal extractor for testing."""
-
-    def __init__(
-        self, sample_rate: int = 32000, hop_ms: float = 8.0, n_features: int = 8
-    ) -> None:
-        super().__init__(sample_rate)
-        self._hop_ms = hop_ms
-        self._n_features = n_features
-
-    @property
-    def n_features(self) -> int:
-        return self._n_features
-
-    @property
-    def hop_ms(self) -> float:
-        return self._hop_ms
-
-    def __hash__(self) -> int:
-        return hash((self._sample_rate, self._hop_ms, self._n_features))
-
-    def extract(self, waveform: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        n_samples = waveform.shape[-1]
-        hop_samples = int(self._hop_ms * self._sample_rate / 1000)
-        n_frames = n_samples // hop_samples
-        features = torch.randn(self._n_features, n_frames)
-        times = torch.arange(n_frames) * (self._hop_ms / 1000.0)
-        return features, times
-
-    def _save_config(self) -> dict:
-        return {
-            "sample_rate": self._sample_rate,
-            "hop_ms": self._hop_ms,
-            "n_features": self._n_features,
-        }
-
-
-@pytest.fixture(scope="module")
-def assets_path() -> Path:
-    """Return path to test assets directory."""
-    return Path(__file__).parents[1] / "assets"
-
-
-@pytest.fixture(scope="module")
-def all_audio_files(assets_path: Path) -> list[Path]:
-    """Return all audio files in assets directory."""
-    return sorted(assets_path.glob("*.wav"))
 
 
 @pytest.fixture(scope="module")
@@ -71,16 +23,16 @@ def extractor() -> SNRExtractor:
 
 
 @pytest.fixture(scope="module")
-def dummy_extractor() -> _DummyExtractor:
+def dummy_extractor() -> DummyExtractor:
     """Return a dummy extractor for unit tests."""
-    return _DummyExtractor(sample_rate=32000, hop_ms=8.0, n_features=8)
+    return DummyExtractor(sample_rate=32000, hop_ms=8.0, n_features=8)
 
 
 class TestSplitByWindows:
     """Tests for _split_by_windows helper function."""
 
     def test_returns_three_lists(
-        self, all_audio_files: list[Path], dummy_extractor: _DummyExtractor
+        self, all_audio_files: list[Path], dummy_extractor: DummyExtractor
     ) -> None:
         """Test that _split_by_windows returns three lists."""
         from callcut.io import scan_recordings
@@ -100,7 +52,7 @@ class TestSplitByWindows:
         assert isinstance(test, list)
 
     def test_all_recordings_assigned(
-        self, all_audio_files: list[Path], dummy_extractor: _DummyExtractor
+        self, all_audio_files: list[Path], dummy_extractor: DummyExtractor
     ) -> None:
         """Test that all recordings are assigned to exactly one split."""
         from callcut.io import scan_recordings
@@ -119,7 +71,7 @@ class TestSplitByWindows:
         assert total == len(recordings)
 
     def test_no_duplicates(
-        self, all_audio_files: list[Path], dummy_extractor: _DummyExtractor
+        self, all_audio_files: list[Path], dummy_extractor: DummyExtractor
     ) -> None:
         """Test that no recording appears in multiple splits."""
         from callcut.io import scan_recordings
@@ -143,7 +95,7 @@ class TestSplitByWindows:
         assert val_paths.isdisjoint(test_paths)
 
     def test_reproducible_with_seed(
-        self, all_audio_files: list[Path], dummy_extractor: _DummyExtractor
+        self, all_audio_files: list[Path], dummy_extractor: DummyExtractor
     ) -> None:
         """Test that same seed produces same split."""
         from callcut.io import scan_recordings
@@ -174,7 +126,7 @@ class TestSplitByWindows:
         assert [r.audio_path for r in test1] == [r.audio_path for r in test2]
 
     def test_different_seeds_differ(
-        self, all_audio_files: list[Path], dummy_extractor: _DummyExtractor
+        self, all_audio_files: list[Path], dummy_extractor: DummyExtractor
     ) -> None:
         """Test that different seeds produce different splits."""
         from callcut.io import scan_recordings
@@ -209,7 +161,7 @@ class TestSplitByWindows:
         assert len(paths2) > 0
 
     def test_train_not_empty(
-        self, all_audio_files: list[Path], dummy_extractor: _DummyExtractor
+        self, all_audio_files: list[Path], dummy_extractor: DummyExtractor
     ) -> None:
         """Test that train split is not empty."""
         from callcut.io import scan_recordings
@@ -227,7 +179,7 @@ class TestSplitByWindows:
         assert len(train) > 0
 
     def test_raises_on_no_valid_recordings(
-        self, dummy_extractor: _DummyExtractor
+        self, dummy_extractor: DummyExtractor
     ) -> None:
         """Test that error is raised when no recordings have valid windows."""
         # Create recordings that are too short

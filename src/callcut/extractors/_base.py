@@ -126,7 +126,9 @@ class BaseExtractor(ABC):
         """Check equality based on extractor configuration."""
         if not isinstance(other, BaseExtractor):
             return False
-        return hash(self) == hash(other)
+        if type(self) is not type(other):
+            return False
+        return self._save_config() == other._save_config()
 
     @abstractmethod
     def extract(self, waveform: Tensor) -> tuple[Tensor, Tensor]:
