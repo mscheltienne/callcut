@@ -19,17 +19,18 @@ def remove_toctrees(app, env):
     for pattern in patterns:
         # inputs should either be a glob pattern or a direct path so just use glob
         srcdir = Path(env.srcdir)
-        for matched in srcdir.glob(pattern):
-            to_remove.append(
-                str(matched.relative_to(srcdir).with_suffix("").as_posix())
-            )
+        to_remove.extend(
+            str(matched.relative_to(srcdir).with_suffix("").as_posix())
+            for matched in srcdir.glob(pattern)
+        )
     # loop through all tocs and remove the ones that match our pattern
-    for _, tocs in env.tocs.items():
+    for tocs in env.tocs.values():
         for toctree in tocs.traverse(addnodes.toctree):
-            new_entries = []
-            for entry in toctree.attributes.get("entries", []):
-                if entry[1] not in to_remove:
-                    new_entries.append(entry)
+            new_entries = [
+                entry
+                for entry in toctree.attributes.get("entries", [])
+                if entry[1] not in to_remove
+            ]
             # if there are no more entries just remove the toctree
             if len(new_entries) == 0:
                 toctree.parent.remove(toctree)

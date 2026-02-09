@@ -153,6 +153,7 @@ forced-separate = ["tests"]
   'D107',  # 'Missing docstring in __init__'
 ]
 '__init__.py' = ['F401']
+'src/callcut/training/_datamodule.py' = ['NPY002']  # legacy np.random seeded by L.seed_everything
 'tutorials/*' = ['D205', 'D400', 'T201']
 
 [tool.ruff.lint.pydocstyle]
