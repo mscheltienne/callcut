@@ -310,7 +310,13 @@ class CallDataModule(LightningDataModule):
         )
 
     def train_dataloader(self) -> DataLoader:
-        """Return the training DataLoader."""
+        """Return the training DataLoader.
+
+        Returns
+        -------
+        dataloader : DataLoader
+            Training DataLoader with shuffling enabled.
+        """
         if self._train_dataset is None:
             raise RuntimeError(
                 "train_dataset not initialized. Call setup('fit') first."
@@ -325,7 +331,13 @@ class CallDataModule(LightningDataModule):
         )
 
     def val_dataloader(self) -> DataLoader | None:
-        """Return the validation DataLoader."""
+        """Return the validation DataLoader.
+
+        Returns
+        -------
+        dataloader : DataLoader | None
+            Validation DataLoader, or ``None`` if no validation recordings.
+        """
         if self._val_dataset is None:
             return None
         return DataLoader(

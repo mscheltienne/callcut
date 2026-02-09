@@ -5,4 +5,4 @@
 .. autoclass:: {{ objname }}
    :members:
    :special-members: __call__
-   :inherited-members:
+   :no-inherited-members:

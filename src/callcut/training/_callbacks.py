@@ -35,7 +35,15 @@ class LoggingCallback(Callback):
     """
 
     def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
-        """Log training metrics at the end of each epoch."""
+        """Log training metrics at the end of each epoch.
+
+        Parameters
+        ----------
+        trainer : Trainer
+            The Lightning trainer instance.
+        pl_module : LightningModule
+            The Lightning module being trained.
+        """
         metrics = trainer.callback_metrics
         epoch = trainer.current_epoch
 
@@ -84,7 +92,15 @@ class MetricsHistoryCallback(Callback):
         self._history: dict[str, list[float]] = {}
 
     def on_train_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
-        """Record metrics at the end of each training epoch."""
+        """Record metrics at the end of each training epoch.
+
+        Parameters
+        ----------
+        trainer : Trainer
+            The Lightning trainer instance.
+        pl_module : LightningModule
+            The Lightning module being trained.
+        """
         metrics = trainer.callback_metrics
 
         for key, value in metrics.items():
@@ -109,7 +125,7 @@ class SaveBestModelCallback(Callback):
 
     Monitors a metric and saves the model's ``state_dict`` when it improves.
     After training, load the best weights with :func:`torch.load` and
-    :meth:`model.load_state_dict`, then use :func:`~callcut.pipeline.save_pipeline`
+    ``model.load_state_dict()``, then use :func:`~callcut.pipeline.save_pipeline`
     to save the full pipeline.
 
     Parameters
@@ -159,7 +175,15 @@ class SaveBestModelCallback(Callback):
     def on_validation_epoch_end(
         self, trainer: Trainer, pl_module: LightningModule
     ) -> None:
-        """Check if model improved and save weights if so."""
+        """Check if model improved and save weights if so.
+
+        Parameters
+        ----------
+        trainer : Trainer
+            The Lightning trainer instance.
+        pl_module : LightningModule
+            The Lightning module being trained.
+        """
         metrics = trainer.callback_metrics
         current_score = metrics.get(self._monitor)
 

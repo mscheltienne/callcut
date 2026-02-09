@@ -103,11 +103,11 @@ class EventMetrics:
     fn : int
         False negatives (ground truth events without a matching prediction).
     precision : float
-        Precision = TP / (TP + FP). Of the predicted calls, what fraction are real?
+        ``Precision = TP / (TP + FP)``. Of the predicted calls, what fraction are real.
     recall : float
-        Recall = TP / (TP + FN). Of the real calls, what fraction were detected?
+        ``Recall = TP / (TP + FN)``. Of the real calls, what fraction were detected.
     f1 : float
-        F1 score = 2 * precision * recall / (precision + recall).
+        ``F1 score = 2 * precision * recall / (precision + recall)``.
         Harmonic mean of precision and recall.
 
     Examples
@@ -232,9 +232,9 @@ class BoundaryAccuracy:
     ----------
     n_matches : int
         Number of matched event pairs used for computing errors.
-    onset_errors_ms : NDArray
+    onset_errors_ms : array of shape ``(n_matches,)``
         Signed onset errors in milliseconds (predicted - ground_truth).
-    offset_errors_ms : NDArray
+    offset_errors_ms : array of shape ``(n_matches,)``
         Signed offset errors in milliseconds (predicted - ground_truth).
 
     Attributes

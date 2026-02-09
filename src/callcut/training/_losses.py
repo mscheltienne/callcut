@@ -40,6 +40,9 @@ class BaseLoss(ABC, nn.Module):
     ...         ...
     """
 
+    def __init__(self) -> None:
+        super().__init__()
+
     @abstractmethod
     def forward(self, logits: Tensor, targets: Tensor) -> Tensor:
         """Compute the loss.
@@ -96,7 +99,20 @@ class BCEWithLogitsLoss(BaseLoss):
         return self._pos_weight
 
     def forward(self, logits: Tensor, targets: Tensor) -> Tensor:
-        """Compute binary cross-entropy loss."""
+        """Compute binary cross-entropy loss.
+
+        Parameters
+        ----------
+        logits : Tensor
+            Raw model output (before sigmoid).
+        targets : Tensor
+            Ground truth binary labels.
+
+        Returns
+        -------
+        loss : Tensor
+            Scalar loss value.
+        """
         if self._loss is None:
             if self._pos_weight is not None:
                 pw = torch.tensor(
@@ -169,7 +185,20 @@ class FocalLoss(BaseLoss):
         return self._gamma
 
     def forward(self, logits: Tensor, targets: Tensor) -> Tensor:
-        """Compute focal loss."""
+        """Compute focal loss.
+
+        Parameters
+        ----------
+        logits : Tensor
+            Raw model output (before sigmoid).
+        targets : Tensor
+            Ground truth binary labels.
+
+        Returns
+        -------
+        loss : Tensor
+            Scalar loss value.
+        """
         probs = torch.sigmoid(logits)
 
         # p_t = p if y=1, else 1-p
@@ -233,7 +262,20 @@ class DiceLoss(BaseLoss):
         return self._smooth
 
     def forward(self, logits: Tensor, targets: Tensor) -> Tensor:
-        """Compute Dice loss."""
+        """Compute Dice loss.
+
+        Parameters
+        ----------
+        logits : Tensor
+            Raw model output (before sigmoid).
+        targets : Tensor
+            Ground truth binary labels.
+
+        Returns
+        -------
+        loss : Tensor
+            Scalar loss value.
+        """
         probs = torch.sigmoid(logits)
 
         # Flatten tensors
@@ -330,7 +372,20 @@ class TverskyLoss(BaseLoss):
         return self._smooth
 
     def forward(self, logits: Tensor, targets: Tensor) -> Tensor:
-        """Compute Tversky loss."""
+        """Compute Tversky loss.
+
+        Parameters
+        ----------
+        logits : Tensor
+            Raw model output (before sigmoid).
+        targets : Tensor
+            Ground truth binary labels.
+
+        Returns
+        -------
+        loss : Tensor
+            Scalar loss value.
+        """
         probs = torch.sigmoid(logits)
 
         # Flatten tensors

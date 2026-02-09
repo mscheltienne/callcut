@@ -142,10 +142,24 @@ numpydoc_xref_aliases = {
     "bool": ":class:`python:bool`",
     "Path": "pathlib.Path",
     "TextIO": "io.TextIOBase",
+    # NumPy
+    "array": "numpy.ndarray",
     # Torch
     "Tensor": "torch.Tensor",
     # callcut
+    "BaseLoss": "callcut.training.BaseLoss",
     "BaseDetector": "callcut.nn.BaseDetector",
+    "BaseExtractor": "callcut.extractors.BaseExtractor",
+    "BaseDecoder": "callcut.evaluation.BaseDecoder",
+    "BaseIntervalMatcher": "callcut.evaluation.BaseIntervalMatcher",
+    "RecordingInfo": "callcut.io.RecordingInfo",
+    "CallDataset": "callcut.io.CallDataset",
+    "Interval": "callcut.evaluation.Interval",
+    "Match": "callcut.evaluation.Match",
+    "EventMetrics": "callcut.evaluation.EventMetrics",
+    "FrameMetrics": "callcut.evaluation.FrameMetrics",
+    "BoundaryAccuracy": "callcut.evaluation.BoundaryAccuracy",
+    "RecordingEvaluation": "callcut.pipeline.RecordingEvaluation",
 }
 numpydoc_xref_ignore = {
     "of",

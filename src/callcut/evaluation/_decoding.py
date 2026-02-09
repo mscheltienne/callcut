@@ -264,12 +264,12 @@ class HysteresisDecoder(BaseDecoder):
 
         Parameters
         ----------
-        probabilities : NDArray
+        probabilities : array of shape ``(n_frames,)``
             Per-frame probabilities.
 
         Returns
         -------
-        mask : NDArray[np.bool_]
+        mask : array of shape ``(n_frames,)``
             Boolean mask where True indicates "in call".
         """
         n_frames = len(probabilities)
@@ -294,9 +294,9 @@ class HysteresisDecoder(BaseDecoder):
 
         Parameters
         ----------
-        mask : NDArray[np.bool_]
+        mask : array of shape ``(n_frames,)``
             Boolean mask where True indicates "in call".
-        times : NDArray
+        times : array of shape ``(n_frames,)``
             Time axis in seconds.
 
         Returns
@@ -369,7 +369,7 @@ class HysteresisDecoder(BaseDecoder):
         ----------
         intervals : list of Interval
             Input intervals.
-        times : NDArray
+        times : array of shape ``(n_frames,)``
             Time axis (used to determine recording bounds).
 
         Returns
