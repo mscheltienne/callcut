@@ -6,8 +6,10 @@
 from __future__ import annotations
 
 import inspect
+import sys
 from datetime import date
 from importlib import import_module
+from pathlib import Path
 
 from intersphinx_registry import get_intersphinx_mapping
 from sphinx.util import logging as sphinx_logging
@@ -15,6 +17,9 @@ from sphinx.util import logging as sphinx_logging
 import callcut
 
 _logger = sphinx_logging.getLogger(__name__)
+
+# -- path setup ------------------------------------------------------------------------
+sys.path.append(str(Path(__file__).parent / "_sphinxext"))
 
 # -- project information ---------------------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -51,6 +56,8 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_design",
     "sphinx_issues",
+    # local extensions
+    "sphinx_remove_toctrees",
 ]
 
 templates_path = ["_templates"]
@@ -105,7 +112,7 @@ autoclass_content = "class"
 
 # -- intersphinx -----------------------------------------------------------------------
 intersphinx_mapping = get_intersphinx_mapping(
-    packages={"numpy", "pandas", "python", "torch"}
+    packages={"numpy", "pandas", "python", "pytorch_lightning", "torch"}
 )
 intersphinx_timeout = 5
 
@@ -146,6 +153,10 @@ numpydoc_xref_aliases = {
     "array": "numpy.ndarray",
     # Torch
     "Tensor": "torch.Tensor",
+    "DataLoader": "torch.utils.data.DataLoader",
+    # Lightning
+    "Trainer": "lightning.pytorch.trainer.trainer.Trainer",
+    "LightningModule": "lightning.pytorch.core.LightningModule",
     # callcut
     "BaseLoss": "callcut.training.BaseLoss",
     "BaseDetector": "callcut.nn.BaseDetector",
@@ -256,3 +267,6 @@ linkcheck_ignore = []  # will be compiled to regex
 # -- sphinx_copybutton -----------------------------------------------------------------
 copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
 copybutton_prompt_is_regexp = True
+
+# -- sphinx_remove_toctrees ------------------------------------------------------------
+remove_from_toctrees = ["generated/api/*"]

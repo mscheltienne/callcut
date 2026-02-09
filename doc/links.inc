@@ -26,6 +26,20 @@
 .. _numpy: https://numpy.org/
 
 
+.. package managers
+
+.. _homebrew: https://brew.sh/
+.. _uv: https://docs.astral.sh/uv/
+
+
 .. scipy
 
 .. _scipy: https://scipy.org/
+
+
+.. torch
+
+.. _ffmpeg: https://www.ffmpeg.org/
+.. _torch: https://pytorch.org/
+.. _torchaudio: https://docs.pytorch.org/audio/stable/index.html
+.. _torchcodec: https://meta-pytorch.org/torchcodec/stable/index.html
