@@ -48,12 +48,16 @@ On Windows:
 
 ----------------------------------------------------------------------------------------
 
-After that, the project can be installed as any python package. For installation from
-source using [uv](https://docs.astral.sh/uv/), you can use directly the keys:
+After that, the project can be installed as any python package distributed on PyPI:
 
 ```
-uv sync --extra cpu
-uv sync --extra cu128
+pip install callcut
+```
+
+For installation from source using [uv](https://docs.astral.sh/uv/):
+
+```
+uv sync
 ```
 
 To pull the torch binaries for your platform. Otherwise, you can pick either of the 2

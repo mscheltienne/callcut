@@ -68,14 +68,6 @@ installed with ``pip`` (or `uv`_):
 
             pip install callcut
 
-    .. tab-item:: Conda
-
-        ``callcut`` is available on the ``conda-forge`` channel:
-
-        .. code-block:: shell
-
-            conda install -c conda-forge callcut
-
     .. tab-item:: Source
 
         To install from source, you can clone the repository then either use ``pip``:
@@ -84,9 +76,8 @@ installed with ``pip`` (or `uv`_):
 
             pip install -e .
 
-        Or `uv`_ which comes with separate index for CPU and CUDA-enabled `torch`_:
+        Or `uv`_:
 
         .. code-block:: shell
 
-            uv sync --extra cpu
-            uv sync --extra cu128
+            uv sync

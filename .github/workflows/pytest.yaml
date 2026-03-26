@@ -32,7 +32,7 @@ jobs:
         with:
           activate-environment: true
           python-version: ${{ matrix.python-version }}
-      - run: uv sync -q --no-default-groups --group test --extra cpu
+      - run: uv sync -q --no-default-groups --group test
       - run: callcut sys-info --developer
       - run: pytest tests --cov=callcut --cov-report=xml --cov-config=pyproject.toml
       - uses: codecov/codecov-action@v5

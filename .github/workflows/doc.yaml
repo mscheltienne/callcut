@@ -23,7 +23,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           activate-environment: true
-      - run: uv sync -q --no-default-groups --group doc --extra cpu
+      - run: uv sync -q --no-default-groups --group doc
       - run: callcut sys-info --developer
       - run: make -C doc html
       - name: Prune sphinx environment
