@@ -57,7 +57,7 @@ def _preload_nvidia_npp() -> None:
     """
     if sys.platform != "linux":
         return
-    if getattr(preload_nvidia_npp, "_done", False):
+    if getattr(_preload_nvidia_npp, "_done", False):
         return
     for path in sys.path:
         if "site-packages" not in path:
@@ -72,4 +72,4 @@ def _preload_nvidia_npp() -> None:
             except OSError:
                 pass
             break
-    preload_nvidia_npp._done = True  # type: ignore[attr-defined]
+    _preload_nvidia_npp._done = True  # type: ignore[attr-defined]
