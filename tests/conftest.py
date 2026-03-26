@@ -6,12 +6,14 @@ import pytest
 import torch
 
 from callcut.extractors import BaseExtractor
+from callcut.utils._fixes import _preload_nvidia_npp
 from callcut.utils.logs import logger
 
 
 def pytest_configure(config: pytest.Config) -> None:
     """Configure pytest options."""
     logger.propagate = True  # setup logging
+    _preload_nvidia_npp()
 
 
 class DummyExtractor(BaseExtractor):

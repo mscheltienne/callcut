@@ -55,13 +55,19 @@ classifiers = [
 dependencies = [
   'click',
   'lightning>=2.0',
-  'torch>=2.10',
-  'torchaudio>=2.10',
-  'torchcodec>=0.10',
   'numpy>=1.23,<3',
+  # 'torchcodec' requires 'libnppicc.so'- and contrary to 'torch' which moved its
+  # packaging to depend on the 'nvidia-xxx' PyPI release from NVIDIA, 'torchcodec'
+  # missed the train and doesn't depend on 'nvidia-npp' yielding a RuntimeError on
+  # import if the CUDA toolkit is not available.
+  # https://github.com/meta-pytorch/torchcodec/issues/1309
+  'nvidia-npp ; platform_system == "Linux"',
   'packaging',
   'pandas',
   'psutil',
+  'torch>=2.10',
+  'torchaudio>=2.10',
+  'torchcodec>=0.10',
 ]
 description = 'Automatic animal call detection.'
 dynamic = ["version"]
