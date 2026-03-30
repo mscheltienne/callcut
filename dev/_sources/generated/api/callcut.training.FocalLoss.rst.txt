@@ -1,0 +1,9 @@
+﻿callcut.training.FocalLoss
+==========================
+
+.. currentmodule:: callcut.training
+
+.. autoclass:: FocalLoss
+   :members:
+   :special-members: __call__
+   :no-inherited-members:

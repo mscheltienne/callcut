@@ -1,0 +1,6 @@
+﻿callcut.io.load\_annotations
+============================
+
+.. currentmodule:: callcut.io
+
+.. autofunction:: load_annotations

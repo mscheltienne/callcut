@@ -1,0 +1,9 @@
+﻿callcut.training.BCEWithLogitsLoss
+==================================
+
+.. currentmodule:: callcut.training
+
+.. autoclass:: BCEWithLogitsLoss
+   :members:
+   :special-members: __call__
+   :no-inherited-members:

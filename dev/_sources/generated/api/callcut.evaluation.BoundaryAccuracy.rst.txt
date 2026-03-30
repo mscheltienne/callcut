@@ -1,0 +1,9 @@
+﻿callcut.evaluation.BoundaryAccuracy
+===================================
+
+.. currentmodule:: callcut.evaluation
+
+.. autoclass:: BoundaryAccuracy
+   :members:
+   :special-members: __call__
+   :inherited-members:

@@ -1,0 +1,6 @@
+﻿callcut.pipeline.evaluate\_recordings
+=====================================
+
+.. currentmodule:: callcut.pipeline
+
+.. autofunction:: evaluate_recordings

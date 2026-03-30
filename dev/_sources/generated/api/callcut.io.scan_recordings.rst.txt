@@ -1,0 +1,6 @@
+﻿callcut.io.scan\_recordings
+===========================
+
+.. currentmodule:: callcut.io
+
+.. autofunction:: scan_recordings

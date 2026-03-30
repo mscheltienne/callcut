@@ -1,0 +1,9 @@
+﻿callcut.training.MetricsHistoryCallback
+=======================================
+
+.. currentmodule:: callcut.training
+
+.. autoclass:: MetricsHistoryCallback
+   :members:
+   :special-members: __call__
+   :no-inherited-members:

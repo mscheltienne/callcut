@@ -1,0 +1,9 @@
+﻿callcut.training.TverskyLoss
+============================
+
+.. currentmodule:: callcut.training
+
+.. autoclass:: TverskyLoss
+   :members:
+   :special-members: __call__
+   :no-inherited-members:

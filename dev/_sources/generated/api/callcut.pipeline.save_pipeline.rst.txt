@@ -1,0 +1,6 @@
+﻿callcut.pipeline.save\_pipeline
+===============================
+
+.. currentmodule:: callcut.pipeline
+
+.. autofunction:: save_pipeline

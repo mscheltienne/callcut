@@ -1,0 +1,9 @@
+﻿callcut.evaluation.BaseIntervalMatcher
+======================================
+
+.. currentmodule:: callcut.evaluation
+
+.. autoclass:: BaseIntervalMatcher
+   :members:
+   :special-members: __call__
+   :inherited-members:

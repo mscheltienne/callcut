@@ -1,0 +1,9 @@
+﻿callcut.training.BaseLoss
+=========================
+
+.. currentmodule:: callcut.training
+
+.. autoclass:: BaseLoss
+   :members:
+   :special-members: __call__
+   :no-inherited-members:

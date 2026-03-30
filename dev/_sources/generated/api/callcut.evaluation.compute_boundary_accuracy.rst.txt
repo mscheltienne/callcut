@@ -1,0 +1,6 @@
+﻿callcut.evaluation.compute\_boundary\_accuracy
+==============================================
+
+.. currentmodule:: callcut.evaluation
+
+.. autofunction:: compute_boundary_accuracy

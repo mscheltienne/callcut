@@ -1,0 +1,9 @@
+﻿callcut.nn.BaseDetector
+=======================
+
+.. currentmodule:: callcut.nn
+
+.. autoclass:: BaseDetector
+   :members:
+   :special-members: __call__
+   :no-inherited-members:

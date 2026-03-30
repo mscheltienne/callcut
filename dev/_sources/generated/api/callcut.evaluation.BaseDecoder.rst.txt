@@ -1,0 +1,9 @@
+﻿callcut.evaluation.BaseDecoder
+==============================
+
+.. currentmodule:: callcut.evaluation
+
+.. autoclass:: BaseDecoder
+   :members:
+   :special-members: __call__
+   :inherited-members:

@@ -1,0 +1,9 @@
+﻿callcut.training.DiceLoss
+=========================
+
+.. currentmodule:: callcut.training
+
+.. autoclass:: DiceLoss
+   :members:
+   :special-members: __call__
+   :no-inherited-members:

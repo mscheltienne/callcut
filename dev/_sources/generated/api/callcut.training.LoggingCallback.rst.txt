@@ -1,0 +1,9 @@
+﻿callcut.training.LoggingCallback
+================================
+
+.. currentmodule:: callcut.training
+
+.. autoclass:: LoggingCallback
+   :members:
+   :special-members: __call__
+   :no-inherited-members:

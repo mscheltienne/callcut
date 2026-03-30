@@ -1,0 +1,9 @@
+﻿callcut.pipeline.EvaluationReport
+=================================
+
+.. currentmodule:: callcut.pipeline
+
+.. autoclass:: EvaluationReport
+   :members:
+   :special-members: __call__
+   :inherited-members:

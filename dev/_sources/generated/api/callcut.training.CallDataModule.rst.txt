@@ -1,0 +1,9 @@
+﻿callcut.training.CallDataModule
+===============================
+
+.. currentmodule:: callcut.training
+
+.. autoclass:: CallDataModule
+   :members:
+   :special-members: __call__
+   :no-inherited-members:

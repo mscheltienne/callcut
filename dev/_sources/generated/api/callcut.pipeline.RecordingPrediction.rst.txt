@@ -1,0 +1,9 @@
+﻿callcut.pipeline.RecordingPrediction
+====================================
+
+.. currentmodule:: callcut.pipeline
+
+.. autoclass:: RecordingPrediction
+   :members:
+   :special-members: __call__
+   :inherited-members:

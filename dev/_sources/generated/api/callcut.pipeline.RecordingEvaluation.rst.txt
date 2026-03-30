@@ -1,0 +1,9 @@
+﻿callcut.pipeline.RecordingEvaluation
+====================================
+
+.. currentmodule:: callcut.pipeline
+
+.. autoclass:: RecordingEvaluation
+   :members:
+   :special-members: __call__
+   :inherited-members:

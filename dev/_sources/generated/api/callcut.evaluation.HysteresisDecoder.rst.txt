@@ -1,0 +1,9 @@
+﻿callcut.evaluation.HysteresisDecoder
+====================================
+
+.. currentmodule:: callcut.evaluation
+
+.. autoclass:: HysteresisDecoder
+   :members:
+   :special-members: __call__
+   :inherited-members:

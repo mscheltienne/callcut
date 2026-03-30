@@ -1,0 +1,9 @@
+﻿callcut.io.CallDataset
+======================
+
+.. currentmodule:: callcut.io
+
+.. autoclass:: CallDataset
+   :members:
+   :special-members: __call__
+   :inherited-members:

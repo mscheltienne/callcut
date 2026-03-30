@@ -1,0 +1,9 @@
+﻿callcut.evaluation.Match
+========================
+
+.. currentmodule:: callcut.evaluation
+
+.. autoclass:: Match
+   :members:
+   :special-members: __call__
+   :inherited-members:

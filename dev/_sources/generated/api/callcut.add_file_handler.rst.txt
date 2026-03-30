@@ -1,0 +1,6 @@
+﻿callcut.add\_file\_handler
+==========================
+
+.. currentmodule:: callcut
+
+.. autofunction:: add_file_handler

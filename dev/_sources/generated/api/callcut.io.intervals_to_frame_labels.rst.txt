@@ -1,0 +1,6 @@
+﻿callcut.io.intervals\_to\_frame\_labels
+=======================================
+
+.. currentmodule:: callcut.io
+
+.. autofunction:: intervals_to_frame_labels

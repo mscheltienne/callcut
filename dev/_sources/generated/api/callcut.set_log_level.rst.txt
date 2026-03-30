@@ -1,0 +1,6 @@
+﻿callcut.set\_log\_level
+=======================
+
+.. currentmodule:: callcut
+
+.. autofunction:: set_log_level

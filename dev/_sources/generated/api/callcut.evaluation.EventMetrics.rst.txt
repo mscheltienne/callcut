@@ -1,0 +1,9 @@
+﻿callcut.evaluation.EventMetrics
+===============================
+
+.. currentmodule:: callcut.evaluation
+
+.. autoclass:: EventMetrics
+   :members:
+   :special-members: __call__
+   :inherited-members:

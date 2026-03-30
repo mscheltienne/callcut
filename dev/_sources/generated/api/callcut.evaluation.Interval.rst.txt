@@ -1,0 +1,9 @@
+﻿callcut.evaluation.Interval
+===========================
+
+.. currentmodule:: callcut.evaluation
+
+.. autoclass:: Interval
+   :members:
+   :special-members: __call__
+   :inherited-members:

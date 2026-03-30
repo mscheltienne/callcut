@@ -1,0 +1,9 @@
+﻿callcut.io.RecordingInfo
+========================
+
+.. currentmodule:: callcut.io
+
+.. autoclass:: RecordingInfo
+   :members:
+   :special-members: __call__
+   :inherited-members:

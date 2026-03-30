@@ -1,0 +1,6 @@
+﻿callcut.evaluation.compute\_event\_metrics
+==========================================
+
+.. currentmodule:: callcut.evaluation
+
+.. autofunction:: compute_event_metrics

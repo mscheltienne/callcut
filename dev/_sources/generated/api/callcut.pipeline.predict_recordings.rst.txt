@@ -1,0 +1,6 @@
+﻿callcut.pipeline.predict\_recordings
+====================================
+
+.. currentmodule:: callcut.pipeline
+
+.. autofunction:: predict_recordings

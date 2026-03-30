@@ -1,0 +1,6 @@
+﻿callcut.io.load\_audio
+======================
+
+.. currentmodule:: callcut.io
+
+.. autofunction:: load_audio

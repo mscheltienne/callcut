@@ -1,0 +1,6 @@
+﻿callcut.evaluation.compute\_frame\_metrics
+==========================================
+
+.. currentmodule:: callcut.evaluation
+
+.. autofunction:: compute_frame_metrics

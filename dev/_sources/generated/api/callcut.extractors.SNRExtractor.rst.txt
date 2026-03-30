@@ -1,0 +1,9 @@
+﻿callcut.extractors.SNRExtractor
+===============================
+
+.. currentmodule:: callcut.extractors
+
+.. autoclass:: SNRExtractor
+   :members:
+   :special-members: __call__
+   :inherited-members:

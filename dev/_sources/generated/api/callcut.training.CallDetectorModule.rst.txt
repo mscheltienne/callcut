@@ -1,0 +1,9 @@
+﻿callcut.training.CallDetectorModule
+===================================
+
+.. currentmodule:: callcut.training
+
+.. autoclass:: CallDetectorModule
+   :members:
+   :special-members: __call__
+   :no-inherited-members:

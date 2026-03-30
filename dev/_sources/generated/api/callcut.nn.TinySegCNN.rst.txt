@@ -1,0 +1,9 @@
+﻿callcut.nn.TinySegCNN
+=====================
+
+.. currentmodule:: callcut.nn
+
+.. autoclass:: TinySegCNN
+   :members:
+   :special-members: __call__
+   :no-inherited-members:

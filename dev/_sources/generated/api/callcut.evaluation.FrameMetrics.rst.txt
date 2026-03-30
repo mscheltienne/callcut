@@ -1,0 +1,9 @@
+﻿callcut.evaluation.FrameMetrics
+===============================
+
+.. currentmodule:: callcut.evaluation
+
+.. autoclass:: FrameMetrics
+   :members:
+   :special-members: __call__
+   :inherited-members:

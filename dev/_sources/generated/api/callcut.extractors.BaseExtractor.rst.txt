@@ -1,0 +1,9 @@
+﻿callcut.extractors.BaseExtractor
+================================
+
+.. currentmodule:: callcut.extractors
+
+.. autoclass:: BaseExtractor
+   :members:
+   :special-members: __call__
+   :inherited-members:

@@ -1,0 +1,6 @@
+﻿callcut.pipeline.load\_pipeline
+===============================
+
+.. currentmodule:: callcut.pipeline
+
+.. autofunction:: load_pipeline

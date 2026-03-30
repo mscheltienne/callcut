@@ -1,0 +1,9 @@
+﻿callcut.evaluation.IoUMatcher
+=============================
+
+.. currentmodule:: callcut.evaluation
+
+.. autoclass:: IoUMatcher
+   :members:
+   :special-members: __call__
+   :inherited-members:

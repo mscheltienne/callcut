@@ -1,0 +1,9 @@
+﻿callcut.training.SaveBestModelCallback
+======================================
+
+.. currentmodule:: callcut.training
+
+.. autoclass:: SaveBestModelCallback
+   :members:
+   :special-members: __call__
+   :no-inherited-members:
