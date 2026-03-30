@@ -17,22 +17,10 @@
 Version 0.1
 ===========
 
-Enhancements
-------------
-
-- xxx
-
-Bugs
-----
-
-- xxx
-
-API and behavior changes
-------------------------
-
-- xxx
+Initial release containing the training and inference structure.
 
 Authors
 -------
 
 * `Mathieu Scheltienne`_
+* `Theophane Piette`_

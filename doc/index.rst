@@ -6,6 +6,7 @@
 .. toctree::
    :hidden:
 
+   usage
    api/index
    changes/index
 
