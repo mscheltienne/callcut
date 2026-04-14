@@ -1954,11 +1954,11 @@ wheels = [
 
 [[package]]
 name = "nvidia-npp"
-version = "13.1.0.44"
+version = "13.1.0.48"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/70/627b7901dad419050000affb7943513c0ce19d1ac2647cb7e3bc5c8ffdd7/nvidia_npp-13.1.0.44-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:39924b72b437df30a5f73d6a4eb88962bf647a7503f7fa5eb67a4041579d90d9", size = 150745106, upload-time = "2026-03-09T09:53:38.065Z" },
-    { url = "https://files.pythonhosted.org/packages/10/e7/6592cda64db4cb91daefee4c08f6d3f81980692c43896397b361f2bd79b3/nvidia_npp-13.1.0.44-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:96b60f1eeefb38b207bb7ab9e5ba6158c95610da76d68767b4ad5c2a13d0c435", size = 135883432, upload-time = "2026-03-09T09:54:03.73Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/48/42039d1296b9bf4d1b0ce04aae7dcadf48c6593df330efd11e9f283dca55/nvidia_npp-13.1.0.48-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:c6809e7446328f492661f43f64a81b471fdb2e775a8b863c8382e33e25eba8ed", size = 150756393, upload-time = "2026-04-13T09:57:06.648Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/75/c1ba0510d5a27d0127440e4ece9d776a33d17583dacc8af3418017819153/nvidia_npp-13.1.0.48-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:deef8d16ab3ee241050c9341a33596f20bae13cb2a8cd5b16f72e4a8743168ab", size = 135896425, upload-time = "2026-04-13T09:57:43.595Z" },
 ]
 
 [[package]]
