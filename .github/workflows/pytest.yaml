@@ -25,7 +25,7 @@ jobs:
     runs-on: ${{ matrix.os }}-latest
     steps:
       - run: sudo apt update && sudo apt install ffmpeg
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v7
